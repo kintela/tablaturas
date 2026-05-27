@@ -74,14 +74,14 @@ function crearTituloCancion(indice: number) {
 }
 
 export function crearGruposMock() {
-  return NOMBRES_GRUPOS.map((nombre) => ({
+  return NOMBRES_GRUPOS.slice(0, 10).map((nombre) => ({
     nombre,
     slug: aSlug(nombre),
   }));
 }
 
 export function crearTablaturasMock(grupoId: string, grupoSlug: string) {
-  return Array.from({ length: 30 }, (_, indice) => {
+  return Array.from({ length: 3 }, (_, indice) => {
     const titulo = crearTituloCancion(indice);
     const slug = aSlug(titulo);
     const precioEuros = 3 + (indice % 8);

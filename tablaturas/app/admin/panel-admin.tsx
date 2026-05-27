@@ -55,7 +55,7 @@ export function PanelAdmin() {
           Datos mock del catálogo
         </h2>
         <p className="max-w-2xl text-sm leading-7 text-zinc-600">
-          Crea 30 grupos y 30 tablaturas por grupo en Supabase. La operación usa
+          Crea 10 grupos y 3 tablaturas por grupo en Supabase. La operación usa
           upsert por slug para que puedas repetirla sin duplicar registros.
         </p>
       </div>
@@ -64,9 +64,9 @@ export function PanelAdmin() {
         <div className="rounded-[1.5rem] bg-zinc-50 p-6">
           <h3 className="text-lg font-semibold text-zinc-950">Qué se generará</h3>
           <ul className="mt-4 space-y-3 text-sm text-zinc-700">
-            <li>30 grupos con nombre y slug.</li>
-            <li>900 tablaturas publicadas con precio y descripción.</li>
-            <li>1800 archivos mock en storage: un PDF y una imagen previa por tablatura.</li>
+            <li>10 grupos con nombre y slug.</li>
+            <li>30 tablaturas publicadas con precio y descripción.</li>
+            <li>60 archivos mock en storage: un PDF y una imagen previa por tablatura.</li>
             <li>Rutas con formato <code>{"{grupo_id}/{tablatura_id}/partitura.pdf"}</code> y <code>preview.svg</code>.</li>
           </ul>
         </div>
