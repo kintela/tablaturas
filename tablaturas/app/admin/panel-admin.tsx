@@ -65,8 +65,9 @@ export function PanelAdmin() {
           <h3 className="text-lg font-semibold text-zinc-950">Qué se generará</h3>
           <ul className="mt-4 space-y-3 text-sm text-zinc-700">
             <li>30 grupos con nombre y slug.</li>
-            <li>900 tablaturas publicadas con precio, descripción y ruta de archivo.</li>
-            <li>Rutas mock con formato `mocks/grupo/cancion.pdf`.</li>
+            <li>900 tablaturas publicadas con precio y descripción.</li>
+            <li>1800 archivos mock en storage: un PDF y una imagen previa por tablatura.</li>
+            <li>Rutas con formato <code>{"{grupo_id}/{tablatura_id}/partitura.pdf"}</code> y <code>preview.svg</code>.</li>
           </ul>
         </div>
 
@@ -100,8 +101,9 @@ export function PanelAdmin() {
       <div className="mt-6 rounded-[1.5rem] border border-rose-200 bg-rose-50 p-6">
         <h3 className="text-lg font-semibold text-rose-950">Zona peligrosa</h3>
         <p className="mt-2 max-w-2xl text-sm leading-7 text-rose-900/80">
-          Esta acción elimina todos los registros de `compras`, `tablaturas` y
-          `grupos`. Úsala solo cuando quieras vaciar completamente el catálogo.
+          Esta acción elimina todos los registros de `compras`, `tablaturas`,
+          `grupos`, `archivos_tablatura` y también los archivos físicos del
+          bucket `tablaturas`.
         </p>
 
         <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-end">

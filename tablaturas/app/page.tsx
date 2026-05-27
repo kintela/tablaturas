@@ -1,65 +1,178 @@
-import Image from "next/image";
+import Link from "next/link";
 
-export default function Home() {
+import { listarTablaturasPublicadas } from "@/lib/catalogo/listar-tablaturas";
+
+type HomePageProps = {
+  searchParams?: Promise<{
+    q?: string;
+  }>;
+};
+
+function formatearPrecio(precioVentaCentimos: number, moneda: string) {
+  return new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: moneda,
+  }).format(precioVentaCentimos / 100);
+}
+
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const params = searchParams ? await searchParams : undefined;
+  const terminoBusqueda = params?.q ?? "";
+  const { resultados, total } = await listarTablaturasPublicadas(terminoBusqueda);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff4c2,_transparent_28%),linear-gradient(180deg,#fcfaf5_0%,#ffffff_45%,#f5f7fb_100%)] px-6 py-8 text-zinc-950">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
+        <section className="overflow-hidden rounded-[2.5rem] border border-black/10 bg-white/85 p-8 shadow-[0_30px_100px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <span className="text-xs font-semibold uppercase tracking-[0.32em] text-zinc-500">
+                Catálogo de batería
+              </span>
+              <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
+                Busca partituras listas para comprar y descargar.
+              </h1>
+              <p className="mt-5 max-w-2xl text-base leading-8 text-zinc-600">
+                Explora tablaturas por canción o por grupo, revisa una imagen previa
+                y prepara el catálogo para la futura compra y descarga digital.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-[1.75rem] bg-zinc-950 px-5 py-4 text-white">
+                <div className="text-xs uppercase tracking-[0.24em] text-white/55">
+                  Resultados
+                </div>
+                <div className="mt-2 text-3xl font-semibold">{total}</div>
+              </div>
+              <div className="rounded-[1.75rem] bg-amber-200 px-5 py-4 text-zinc-950">
+                <div className="text-xs uppercase tracking-[0.24em] text-zinc-700">
+                  Preview
+                </div>
+                <div className="mt-2 text-3xl font-semibold">SVG</div>
+              </div>
+              <div className="rounded-[1.75rem] bg-zinc-100 px-5 py-4 text-zinc-950">
+                <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+                  Descarga
+                </div>
+                <div className="mt-2 text-3xl font-semibold">PDF</div>
+              </div>
+            </div>
+          </div>
+
+          <form className="mt-8 flex flex-col gap-3 rounded-[2rem] border border-black/10 bg-zinc-50 p-4 sm:flex-row">
+            <input
+              type="search"
+              name="q"
+              defaultValue={terminoBusqueda}
+              placeholder="Busca por canción o grupo"
+              className="h-14 flex-1 rounded-full border border-black/10 bg-white px-5 text-sm outline-none transition focus:border-zinc-950"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            <button
+              type="submit"
+              className="h-14 rounded-full bg-zinc-950 px-7 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            >
+              Buscar
+            </button>
+            <Link
+              href="/admin"
+              className="inline-flex h-14 items-center justify-center rounded-full border border-black/10 bg-white px-7 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950"
+            >
+              Admin
+            </Link>
+          </form>
+        </section>
+
+        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {resultados.length === 0 ? (
+            <div className="col-span-full rounded-[2rem] border border-dashed border-black/10 bg-white/80 p-10 text-center">
+              <p className="text-lg font-medium text-zinc-950">
+                No hay resultados para esa búsqueda.
+              </p>
+              <p className="mt-2 text-sm text-zinc-600">
+                Prueba con otro nombre de canción o con el grupo.
+              </p>
+            </div>
+          ) : null}
+
+          {resultados.map((tablatura) => (
+            <article
+              key={tablatura.id}
+              className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
+            >
+              <div className="aspect-[16/9] bg-zinc-100">
+                {tablatura.previewUrl ? (
+                  <img
+                    src={tablatura.previewUrl}
+                    alt={`Preview de ${tablatura.tituloCancion}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,#f4f4f5,#fafaf9)] text-sm text-zinc-500">
+                    Preview no disponible
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-5 p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                      {tablatura.grupo?.nombre ?? "Grupo sin nombre"}
+                    </p>
+                    <h2 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-950">
+                      {tablatura.tituloCancion}
+                    </h2>
+                  </div>
+                  <span className="rounded-full bg-amber-200 px-3 py-2 text-sm font-semibold text-zinc-950">
+                    {formatearPrecio(
+                      tablatura.precioVentaCentimos,
+                      tablatura.moneda
+                    )}
+                  </span>
+                </div>
+
+                <p className="min-h-14 text-sm leading-7 text-zinc-600">
+                  {tablatura.descripcion ?? "Sin descripción disponible."}
+                </p>
+
+                <div className="flex flex-wrap gap-3">
+                  {tablatura.previewUrl ? (
+                    <a
+                      href={tablatura.previewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center rounded-full border border-black/10 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950"
+                    >
+                      Ver preview
+                    </a>
+                  ) : null}
+
+                  {tablatura.pdfUrl ? (
+                    <a
+                      href={tablatura.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                    >
+                      Abrir PDF
+                    </a>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-500"
+                    disabled
+                  >
+                    Comprar próximamente
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
+      </div>
+    </main>
   );
 }
+
