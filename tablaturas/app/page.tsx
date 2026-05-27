@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AuthPanel } from "@/app/auth/auth-panel";
 import { BotonCarrito } from "@/app/catalogo/boton-carrito";
+import { PanelCarrito } from "@/app/catalogo/panel-carrito";
 import { BotonPreview } from "@/app/catalogo/boton-preview";
 import { listarTablaturasPublicadas } from "@/lib/catalogo/listar-tablaturas";
 
@@ -94,7 +95,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </h1>
             </div>
 
-            <div className="flex justify-end lg:min-w-[220px]">
+            <div className="flex items-start justify-start gap-4 pl-4 lg:min-w-[300px]">
+              <PanelCarrito />
               <AuthPanel />
             </div>
           </div>
@@ -255,7 +257,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                             />
                           ) : null}
 
-                          <BotonCarrito />
+                          <BotonCarrito
+                            item={{
+                              id: tablatura.id,
+                              titulo: tablatura.tituloCancion,
+                              grupoNombre: tablatura.grupo?.nombre ?? "Grupo sin nombre",
+                              precioVentaCentimos: tablatura.precioVentaCentimos,
+                              moneda: tablatura.moneda,
+                              previewUrl: tablatura.previewUrl,
+                            }}
+                          />
                         </div>
                       </div>
                     </article>
@@ -326,7 +337,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                     />
                   ) : null}
 
-                  <BotonCarrito />
+                  <BotonCarrito
+                    item={{
+                      id: tablatura.id,
+                      titulo: tablatura.tituloCancion,
+                      grupoNombre: tablatura.grupo?.nombre ?? "Grupo sin nombre",
+                      precioVentaCentimos: tablatura.precioVentaCentimos,
+                      moneda: tablatura.moneda,
+                      previewUrl: tablatura.previewUrl,
+                    }}
+                  />
                 </div>
               </div>
             </article>

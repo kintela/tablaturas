@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from "react";
 
+import {
+  anadirAlCarrito,
+  estaEnCarrito,
+  quitarDelCarrito,
+  type ItemCarrito,
+} from "@/app/catalogo/carrito-store";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 function IconoCarrito() {
@@ -23,9 +29,14 @@ function IconoCarrito() {
   );
 }
 
-export function BotonCarrito() {
+type BotonCarritoProps = {
+  item: ItemCarrito;
+};
+
+export function BotonCarrito({ item }: BotonCarritoProps) {
   const supabase = getSupabaseBrowserClient();
   const [autenticado, setAutenticado] = useState(false);
+  const [enCarrito, setEnCarrito] = useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -37,6 +48,7 @@ export function BotonCarrito() {
 
       if (activo) {
         setAutenticado(Boolean(session));
+        setEnCarrito(estaEnCarrito(item.id));
       }
     }
 
@@ -52,11 +64,41 @@ export function BotonCarrito() {
       activo = false;
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [item.id, supabase]);
+
+  useEffect(() => {
+    function sincronizar() {
+      setEnCarrito(estaEnCarrito(item.id));
+    }
+
+    sincronizar();
+    window.addEventListener("carrito-actualizado", sincronizar);
+
+    return () => {
+      window.removeEventListener("carrito-actualizado", sincronizar);
+    };
+  }, [item.id]);
 
   const tooltip = autenticado
-    ? "Añadir al carrito"
+    ? enCarrito
+      ? "Quitar del carrito"
+      : "Añadir al carrito"
     : "Para poder hacer una compra antes has de iniciar sesion con tu cuenta. Si no la has creado aún este es un buen momento";
+
+  function manejarClick() {
+    if (!autenticado) {
+      return;
+    }
+
+    if (enCarrito) {
+      quitarDelCarrito(item.id);
+      setEnCarrito(false);
+      return;
+    }
+
+    anadirAlCarrito(item);
+    setEnCarrito(true);
+  }
 
   return (
     <span className="inline-flex" title={tooltip}>
@@ -64,9 +106,12 @@ export function BotonCarrito() {
         type="button"
         disabled={!autenticado}
         aria-label={tooltip}
+        onClick={manejarClick}
         className={`inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${
           autenticado
-            ? "border-black/10 bg-white text-zinc-700 hover:border-zinc-950 hover:bg-zinc-950 hover:text-white"
+            ? enCarrito
+              ? "border-zinc-950 bg-zinc-950 text-white"
+              : "border-black/10 bg-white text-zinc-700 hover:border-zinc-950 hover:bg-zinc-950 hover:text-white"
             : "cursor-not-allowed border-black/10 bg-zinc-100 text-zinc-400 opacity-70"
         }`}
       >
