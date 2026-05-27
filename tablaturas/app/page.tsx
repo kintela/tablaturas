@@ -6,6 +6,7 @@ type HomePageProps = {
   searchParams?: Promise<{
     q?: string;
     columnas?: string;
+    vista?: string;
   }>;
 };
 
@@ -36,10 +37,24 @@ function crearHref(q: string, columnas: string) {
   return `/?${params.toString()}`;
 }
 
+function crearHrefConVista(q: string, columnas: string, vista: string) {
+  const params = new URLSearchParams();
+
+  if (q.trim()) {
+    params.set("q", q.trim());
+  }
+
+  params.set("columnas", columnas);
+  params.set("vista", vista);
+
+  return `/?${params.toString()}`;
+}
+
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = searchParams ? await searchParams : undefined;
   const terminoBusqueda = params?.q ?? "";
   const columnas = obtenerColumnas(params?.columnas);
+  const vista = params?.vista === "agrupada" ? "agrupada" : "rejilla";
   const { resultados, total } = await listarTablaturasPublicadas(terminoBusqueda);
 
   const clasesGrid =
@@ -48,6 +63,31 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       : columnas === "4"
         ? "grid gap-5 md:grid-cols-2 xl:grid-cols-4"
         : "grid gap-5 md:grid-cols-2 xl:grid-cols-3";
+
+  const gruposAgrupados = resultados.reduce<
+    Array<{
+      nombreGrupo: string;
+      slugGrupo: string;
+      items: typeof resultados;
+    }>
+  >((acc, tablatura) => {
+    const nombreGrupo = tablatura.grupo?.nombre ?? "Grupo sin nombre";
+    const slugGrupo = tablatura.grupo?.slug ?? "sin-grupo";
+    const existente = acc.find((grupo) => grupo.slugGrupo === slugGrupo);
+
+    if (existente) {
+      existente.items.push(tablatura);
+      return acc;
+    }
+
+    acc.push({
+      nombreGrupo,
+      slugGrupo,
+      items: [tablatura],
+    });
+
+    return acc;
+  }, []);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff4c2,_transparent_28%),linear-gradient(180deg,#fcfaf5_0%,#ffffff_45%,#f5f7fb_100%)] px-6 py-8 text-zinc-950">
@@ -91,6 +131,26 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </div>
 
             <div className="flex flex-wrap gap-2">
+              <Link
+                href={crearHrefConVista(terminoBusqueda, columnas, "rejilla")}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  vista === "rejilla"
+                    ? "bg-zinc-950 text-white"
+                    : "border border-black/10 bg-white text-zinc-700 hover:border-zinc-950"
+                }`}
+              >
+                Rejilla
+              </Link>
+              <Link
+                href={crearHrefConVista(terminoBusqueda, columnas, "agrupada")}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  vista === "agrupada"
+                    ? "bg-zinc-950 text-white"
+                    : "border border-black/10 bg-white text-zinc-700 hover:border-zinc-950"
+                }`}
+              >
+                Agrupar
+              </Link>
               {[
                 { valor: "3", etiqueta: "3 por fila" },
                 { valor: "4", etiqueta: "4 por fila" },
@@ -101,7 +161,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 return (
                   <Link
                     key={opcion.valor}
-                    href={crearHref(terminoBusqueda, opcion.valor)}
+                    href={crearHrefConVista(terminoBusqueda, opcion.valor, vista)}
                     className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                       activa
                         ? "bg-zinc-950 text-white"
@@ -116,6 +176,119 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </div>
         </section>
 
+        {vista === "agrupada" ? (
+          <section className="flex flex-col gap-8">
+            {resultados.length === 0 ? (
+              <div className="rounded-[2rem] border border-dashed border-black/10 bg-white/80 p-10 text-center">
+                <p className="text-lg font-medium text-zinc-950">
+                  No hay resultados para esa búsqueda.
+                </p>
+                <p className="mt-2 text-sm text-zinc-600">
+                  Prueba con otro nombre de canción o con el grupo.
+                </p>
+              </div>
+            ) : null}
+
+            {gruposAgrupados.map((grupo) => (
+              <section
+                key={grupo.slugGrupo}
+                className="rounded-[2rem] border border-black/10 bg-white/70 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.04)]"
+              >
+                <div className="mb-5 flex items-center justify-between gap-4 border-b border-black/10 pb-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                      Grupo
+                    </p>
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                      {grupo.nombreGrupo}
+                    </h2>
+                  </div>
+                  <span className="rounded-full bg-amber-200 px-3 py-2 text-sm font-semibold text-zinc-950">
+                    {grupo.items.length} partituras
+                  </span>
+                </div>
+
+                <div className={clasesGrid}>
+                  {grupo.items.map((tablatura) => (
+                    <article
+                      key={tablatura.id}
+                      className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
+                    >
+                      <div className="aspect-[16/9] bg-zinc-100">
+                        {tablatura.previewUrl ? (
+                          <img
+                            src={tablatura.previewUrl}
+                            alt={`Preview de ${tablatura.tituloCancion}`}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,#f4f4f5,#fafaf9)] text-sm text-zinc-500">
+                            Preview no disponible
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-5 p-6">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                              {tablatura.grupo?.nombre ?? "Grupo sin nombre"}
+                            </p>
+                            <h3 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-950">
+                              {tablatura.tituloCancion}
+                            </h3>
+                          </div>
+                          <span className="rounded-full bg-amber-200 px-3 py-2 text-sm font-semibold text-zinc-950">
+                            {formatearPrecio(
+                              tablatura.precioVentaCentimos,
+                              tablatura.moneda
+                            )}
+                          </span>
+                        </div>
+
+                        <p className="min-h-14 text-sm leading-7 text-zinc-600">
+                          {tablatura.descripcion ?? "Sin descripción disponible."}
+                        </p>
+
+                        <div className="flex flex-wrap gap-3">
+                          {tablatura.previewUrl ? (
+                            <a
+                              href={tablatura.previewUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center rounded-full border border-black/10 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950"
+                            >
+                              Ver preview
+                            </a>
+                          ) : null}
+
+                          {tablatura.pdfUrl ? (
+                            <a
+                              href={tablatura.pdfUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                            >
+                              Abrir PDF
+                            </a>
+                          ) : null}
+
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-500"
+                            disabled
+                          >
+                            Comprar próximamente
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </section>
+        ) : (
         <section className={clasesGrid}>
           {resultados.length === 0 ? (
             <div className="col-span-full rounded-[2rem] border border-dashed border-black/10 bg-white/80 p-10 text-center">
@@ -204,6 +377,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </article>
           ))}
         </section>
+        )}
       </div>
     </main>
   );
