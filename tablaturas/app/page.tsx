@@ -1,8 +1,11 @@
+import Link from "next/link";
+
 import { listarTablaturasPublicadas } from "@/lib/catalogo/listar-tablaturas";
 
 type HomePageProps = {
   searchParams?: Promise<{
     q?: string;
+    columnas?: string;
   }>;
 };
 
@@ -13,10 +16,38 @@ function formatearPrecio(precioVentaCentimos: number, moneda: string) {
   }).format(precioVentaCentimos / 100);
 }
 
+function obtenerColumnas(valor?: string) {
+  if (valor === "4" || valor === "6") {
+    return valor;
+  }
+
+  return "3";
+}
+
+function crearHref(q: string, columnas: string) {
+  const params = new URLSearchParams();
+
+  if (q.trim()) {
+    params.set("q", q.trim());
+  }
+
+  params.set("columnas", columnas);
+
+  return `/?${params.toString()}`;
+}
+
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = searchParams ? await searchParams : undefined;
   const terminoBusqueda = params?.q ?? "";
+  const columnas = obtenerColumnas(params?.columnas);
   const { resultados, total } = await listarTablaturasPublicadas(terminoBusqueda);
+
+  const clasesGrid =
+    columnas === "6"
+      ? "grid gap-5 md:grid-cols-2 xl:grid-cols-6"
+      : columnas === "4"
+        ? "grid gap-5 md:grid-cols-2 xl:grid-cols-4"
+        : "grid gap-5 md:grid-cols-2 xl:grid-cols-3";
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff4c2,_transparent_28%),linear-gradient(180deg,#fcfaf5_0%,#ffffff_45%,#f5f7fb_100%)] px-6 py-8 text-zinc-950">
@@ -48,7 +79,44 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </form>
         </section>
 
-        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <section className="flex flex-col gap-4 rounded-[2rem] border border-black/10 bg-white/80 p-4 shadow-[0_20px_60px_rgba(15,23,42,0.04)]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                Vista de resultados
+              </p>
+              <p className="mt-1 text-sm text-zinc-600">
+                {total} tablaturas encontradas
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {[
+                { valor: "3", etiqueta: "3 por fila" },
+                { valor: "4", etiqueta: "4 por fila" },
+                { valor: "6", etiqueta: "6 por fila" },
+              ].map((opcion) => {
+                const activa = columnas === opcion.valor;
+
+                return (
+                  <Link
+                    key={opcion.valor}
+                    href={crearHref(terminoBusqueda, opcion.valor)}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      activa
+                        ? "bg-zinc-950 text-white"
+                        : "border border-black/10 bg-white text-zinc-700 hover:border-zinc-950"
+                    }`}
+                  >
+                    {opcion.etiqueta}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className={clasesGrid}>
           {resultados.length === 0 ? (
             <div className="col-span-full rounded-[2rem] border border-dashed border-black/10 bg-white/80 p-10 text-center">
               <p className="text-lg font-medium text-zinc-950">
