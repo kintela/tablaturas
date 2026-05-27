@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AuthPanel } from "@/app/auth/auth-panel";
 import { BotonCarrito } from "@/app/catalogo/boton-carrito";
+import { BotonPreview } from "@/app/catalogo/boton-preview";
 import { listarTablaturasPublicadas } from "@/lib/catalogo/listar-tablaturas";
 
 type HomePageProps = {
@@ -248,14 +249,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
                         <div className="flex flex-wrap gap-3">
                           {tablatura.previewUrl ? (
-                            <a
-                              href={tablatura.previewUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center rounded-full border border-black/10 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950"
-                            >
-                              Ver preview
-                            </a>
+                            <BotonPreview
+                              previewUrl={tablatura.previewUrl}
+                              titulo={tablatura.tituloCancion}
+                            />
                           ) : null}
 
                           <BotonCarrito />
@@ -323,14 +320,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
                 <div className="flex flex-wrap gap-3">
                   {tablatura.previewUrl ? (
-                    <a
-                      href={tablatura.previewUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center rounded-full border border-black/10 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950"
-                    >
-                      Ver preview
-                    </a>
+                    <BotonPreview
+                      previewUrl={tablatura.previewUrl}
+                      titulo={tablatura.tituloCancion}
+                    />
                   ) : null}
 
                   <BotonCarrito />
