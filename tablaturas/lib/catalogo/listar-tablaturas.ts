@@ -99,8 +99,24 @@ export async function listarTablaturasPublicadas(terminoBusqueda?: string) {
       })
     : filas;
 
+  const ordenadas = [...filtradas].sort((a, b) => {
+    const grupoA = a.grupos?.nombre ?? "";
+    const grupoB = b.grupos?.nombre ?? "";
+    const comparacionGrupo = grupoA.localeCompare(grupoB, "es", {
+      sensitivity: "base",
+    });
+
+    if (comparacionGrupo !== 0) {
+      return comparacionGrupo;
+    }
+
+    return a.titulo_cancion.localeCompare(b.titulo_cancion, "es", {
+      sensitivity: "base",
+    });
+  });
+
   const resultados = await Promise.all(
-    filtradas.slice(0, 60).map(async (tablatura) => {
+    ordenadas.slice(0, 60).map(async (tablatura) => {
       const archivosOrdenados = [...(tablatura.archivos_tablatura ?? [])].sort(
         (a, b) => a.orden - b.orden
       );
@@ -145,7 +161,7 @@ export async function listarTablaturasPublicadas(terminoBusqueda?: string) {
   );
 
   return {
-    total: filtradas.length,
+    total: ordenadas.length,
     resultados,
   };
 }

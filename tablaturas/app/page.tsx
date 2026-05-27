@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { listarTablaturasPublicadas } from "@/lib/catalogo/listar-tablaturas";
 
 type HomePageProps = {
@@ -24,43 +22,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff4c2,_transparent_28%),linear-gradient(180deg,#fcfaf5_0%,#ffffff_45%,#f5f7fb_100%)] px-6 py-8 text-zinc-950">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
         <section className="overflow-hidden rounded-[2.5rem] border border-black/10 bg-white/85 p-8 shadow-[0_30px_100px_rgba(15,23,42,0.08)] backdrop-blur">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <span className="text-xs font-semibold uppercase tracking-[0.32em] text-zinc-500">
-                Catálogo de batería
-              </span>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
-                Busca partituras listas para comprar y descargar.
-              </h1>
-              <p className="mt-5 max-w-2xl text-base leading-8 text-zinc-600">
-                Explora tablaturas por canción o por grupo, revisa una imagen previa
-                y prepara el catálogo para la futura compra y descarga digital.
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-[1.75rem] bg-zinc-950 px-5 py-4 text-white">
-                <div className="text-xs uppercase tracking-[0.24em] text-white/55">
-                  Resultados
-                </div>
-                <div className="mt-2 text-3xl font-semibold">{total}</div>
-              </div>
-              <div className="rounded-[1.75rem] bg-amber-200 px-5 py-4 text-zinc-950">
-                <div className="text-xs uppercase tracking-[0.24em] text-zinc-700">
-                  Preview
-                </div>
-                <div className="mt-2 text-3xl font-semibold">SVG</div>
-              </div>
-              <div className="rounded-[1.75rem] bg-zinc-100 px-5 py-4 text-zinc-950">
-                <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-                  Descarga
-                </div>
-                <div className="mt-2 text-3xl font-semibold">PDF</div>
-              </div>
-            </div>
+          <div className="max-w-6xl">
+            <span className="text-xs font-semibold uppercase tracking-[0.32em] text-zinc-500">
+              Catálogo de batería
+            </span>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl lg:whitespace-nowrap lg:text-[3.5rem]">
+              Encuentra la partitura que necesitas
+            </h1>
           </div>
 
-          <form className="mt-8 flex flex-col gap-3 rounded-[2rem] border border-black/10 bg-zinc-50 p-4 sm:flex-row">
+          <form className="mt-6 flex flex-col gap-3 rounded-[2rem] border border-black/10 bg-zinc-50 p-4 sm:flex-row">
             <input
               type="search"
               name="q"
@@ -74,12 +45,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             >
               Buscar
             </button>
-            <Link
-              href="/admin"
-              className="inline-flex h-14 items-center justify-center rounded-full border border-black/10 bg-white px-7 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950"
-            >
-              Admin
-            </Link>
           </form>
         </section>
 
@@ -175,4 +140,3 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     </main>
   );
 }
-
