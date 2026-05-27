@@ -50,6 +50,25 @@ function crearHrefConVista(q: string, columnas: string, vista: string) {
   return `/?${params.toString()}`;
 }
 
+function IconoCarrito() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="9" cy="20" r="1.5" />
+      <circle cx="18" cy="20" r="1.5" />
+      <path d="M3 4h2l2.4 10.2a1 1 0 0 0 1 .8h9.9a1 1 0 0 0 1-.8L21 7H7.2" />
+    </svg>
+  );
+}
+
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = searchParams ? await searchParams : undefined;
   const terminoBusqueda = params?.q ?? "";
@@ -264,10 +283,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
                           <button
                             type="button"
-                            className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-500"
-                            disabled
+                            aria-label="Añadir al carrito próximamente"
+                            title="Añadir al carrito próximamente"
+                            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-700 transition hover:border-zinc-950 hover:bg-zinc-950 hover:text-white"
                           >
-                            Comprar próximamente
+                            <IconoCarrito />
                           </button>
                         </div>
                       </div>
@@ -345,10 +365,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-500"
-                    disabled
+                    aria-label="Añadir al carrito próximamente"
+                    title="Añadir al carrito próximamente"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-700 transition hover:border-zinc-950 hover:bg-zinc-950 hover:text-white"
                   >
-                    Comprar próximamente
+                    <IconoCarrito />
                   </button>
                 </div>
               </div>
