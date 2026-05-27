@@ -6,12 +6,14 @@ type ResultadoSeed = {
   ok: boolean;
   gruposCreados?: number;
   tablaturasCreadas?: number;
+  mensaje?: string;
   error?: string;
 };
 
 export function PanelAdmin() {
   const [resultado, setResultado] = useState<ResultadoSeed | null>(null);
   const [tokenAdmin, setTokenAdmin] = useState("");
+  const [confirmacionBorrado, setConfirmacionBorrado] = useState("");
   const [isPending, startTransition] = useTransition();
 
   function crearMocks() {
@@ -25,6 +27,21 @@ export function PanelAdmin() {
 
       const data = (await response.json()) as ResultadoSeed;
       setResultado(data);
+    });
+  }
+
+  function borrarDatos() {
+    startTransition(async () => {
+      setResultado(null);
+
+      const response = await fetch("/api/admin/crear-mocks", {
+        method: "DELETE",
+        headers: tokenAdmin ? { "x-admin-token": tokenAdmin } : undefined,
+      });
+
+      const data = (await response.json()) as ResultadoSeed;
+      setResultado(data);
+      setConfirmacionBorrado("");
     });
   }
 
@@ -80,6 +97,41 @@ export function PanelAdmin() {
         </div>
       </div>
 
+      <div className="mt-6 rounded-[1.5rem] border border-rose-200 bg-rose-50 p-6">
+        <h3 className="text-lg font-semibold text-rose-950">Zona peligrosa</h3>
+        <p className="mt-2 max-w-2xl text-sm leading-7 text-rose-900/80">
+          Esta acción elimina todos los registros de `compras`, `tablaturas` y
+          `grupos`. Úsala solo cuando quieras vaciar completamente el catálogo.
+        </p>
+
+        <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-end">
+          <div className="flex-1">
+            <label
+              className="block text-sm font-medium text-rose-950"
+              htmlFor="confirmacion-borrado"
+            >
+              Escribe BORRAR para confirmar
+            </label>
+            <input
+              id="confirmacion-borrado"
+              type="text"
+              value={confirmacionBorrado}
+              onChange={(event) => setConfirmacionBorrado(event.target.value)}
+              className="mt-2 w-full rounded-full border border-rose-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-rose-500"
+              placeholder="BORRAR"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={borrarDatos}
+            disabled={isPending || confirmacionBorrado !== "BORRAR"}
+            className="rounded-full bg-rose-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isPending ? "Eliminando datos..." : "Eliminar todos los datos"}
+          </button>
+        </div>
+      </div>
+
       {resultado ? (
         <div
           className={`mt-6 rounded-[1.5rem] p-5 text-sm ${
@@ -90,8 +142,8 @@ export function PanelAdmin() {
         >
           {resultado.ok ? (
             <p>
-              Proceso completado. Grupos: {resultado.gruposCreados}. Tablaturas:{" "}
-              {resultado.tablaturasCreadas}.
+              {resultado.mensaje ??
+                `Proceso completado. Grupos: ${resultado.gruposCreados}. Tablaturas: ${resultado.tablaturasCreadas}.`}
             </p>
           ) : (
             <p>{resultado.error ?? "No se pudo completar la operación."}</p>
@@ -101,4 +153,3 @@ export function PanelAdmin() {
     </section>
   );
 }
-

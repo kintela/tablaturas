@@ -60,3 +60,53 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: mensaje }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    if (!accesoPermitido(request)) {
+      return NextResponse.json(
+        { error: "No autorizado para ejecutar esta acción." },
+        { status: 403 }
+      );
+    }
+
+    const { error: errorCompras } = await supabaseAdmin
+      .from("compras")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+
+    if (errorCompras) {
+      throw errorCompras;
+    }
+
+    const { error: errorTablaturas } = await supabaseAdmin
+      .from("tablaturas")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+
+    if (errorTablaturas) {
+      throw errorTablaturas;
+    }
+
+    const { error: errorGrupos } = await supabaseAdmin
+      .from("grupos")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+
+    if (errorGrupos) {
+      throw errorGrupos;
+    }
+
+    return NextResponse.json({
+      ok: true,
+      mensaje: "Se han eliminado todos los datos de grupos, tablaturas y compras.",
+    });
+  } catch (error) {
+    const mensaje =
+      error instanceof Error ? error.message : "Error desconocido eliminando datos.";
+
+    console.error("Error eliminando datos mock:", error);
+
+    return NextResponse.json({ ok: false, error: mensaje }, { status: 500 });
+  }
+}
