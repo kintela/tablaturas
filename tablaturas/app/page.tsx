@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AuthPanel } from "@/app/auth/auth-panel";
 import { listarTablaturasPublicadas } from "@/lib/catalogo/listar-tablaturas";
 
 type HomePageProps = {
@@ -23,18 +24,6 @@ function obtenerColumnas(valor?: string) {
   }
 
   return "3";
-}
-
-function crearHref(q: string, columnas: string) {
-  const params = new URLSearchParams();
-
-  if (q.trim()) {
-    params.set("q", q.trim());
-  }
-
-  params.set("columnas", columnas);
-
-  return `/?${params.toString()}`;
 }
 
 function crearHrefConVista(q: string, columnas: string, vista: string) {
@@ -112,13 +101,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff4c2,_transparent_28%),linear-gradient(180deg,#fcfaf5_0%,#ffffff_45%,#f5f7fb_100%)] px-6 py-8 text-zinc-950">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
         <section className="overflow-hidden rounded-[2.5rem] border border-black/10 bg-white/85 p-8 shadow-[0_30px_100px_rgba(15,23,42,0.08)] backdrop-blur">
-          <div className="max-w-6xl">
-            <span className="text-xs font-semibold uppercase tracking-[0.32em] text-zinc-500">
-              Catálogo de batería
-            </span>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl lg:whitespace-nowrap lg:text-[3.5rem]">
-              Encuentra la partitura que necesitas
-            </h1>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-6xl">
+              <span className="text-xs font-semibold uppercase tracking-[0.32em] text-zinc-500">
+                Catálogo de batería
+              </span>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl lg:whitespace-nowrap lg:text-[3.5rem]">
+                Encuentra la partitura que necesitas
+              </h1>
+            </div>
+
+            <div className="flex justify-end lg:min-w-[220px]">
+              <AuthPanel />
+            </div>
           </div>
 
           <form className="mt-6 flex flex-col gap-3 rounded-[2rem] border border-black/10 bg-zinc-50 p-4 sm:flex-row">

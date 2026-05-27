@@ -1,10 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-type GrupoRow = {
-  nombre: string;
-  slug: string;
-};
-
 type ArchivoRow = {
   tipo_archivo: "pdf" | "imagen_previa" | "audio" | "zip" | "otro";
   bucket: string;
