@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AuthPanel } from "@/app/auth/auth-panel";
+import { BotonCarrito } from "@/app/catalogo/boton-carrito";
 import { listarTablaturasPublicadas } from "@/lib/catalogo/listar-tablaturas";
 
 type HomePageProps = {
@@ -37,25 +38,6 @@ function crearHrefConVista(q: string, columnas: string, vista: string) {
   params.set("vista", vista);
 
   return `/?${params.toString()}`;
-}
-
-function IconoCarrito() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="9" cy="20" r="1.5" />
-      <circle cx="18" cy="20" r="1.5" />
-      <path d="M3 4h2l2.4 10.2a1 1 0 0 0 1 .8h9.9a1 1 0 0 0 1-.8L21 7H7.2" />
-    </svg>
-  );
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
@@ -276,14 +258,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                             </a>
                           ) : null}
 
-                          <button
-                            type="button"
-                            aria-label="Añadir al carrito próximamente"
-                            title="Añadir al carrito próximamente"
-                            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-700 transition hover:border-zinc-950 hover:bg-zinc-950 hover:text-white"
-                          >
-                            <IconoCarrito />
-                          </button>
+                          <BotonCarrito />
                         </div>
                       </div>
                     </article>
@@ -358,14 +333,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                     </a>
                   ) : null}
 
-                  <button
-                    type="button"
-                    aria-label="Añadir al carrito próximamente"
-                    title="Añadir al carrito próximamente"
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-700 transition hover:border-zinc-950 hover:bg-zinc-950 hover:text-white"
-                  >
-                    <IconoCarrito />
-                  </button>
+                  <BotonCarrito />
                 </div>
               </div>
             </article>
