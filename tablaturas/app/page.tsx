@@ -262,17 +262,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                             </a>
                           ) : null}
 
-                          {tablatura.pdfUrl ? (
-                            <a
-                              href={tablatura.pdfUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
-                            >
-                              Abrir PDF
-                            </a>
-                          ) : null}
-
                           <button
                             type="button"
                             className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-500"
@@ -351,17 +340,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       className="inline-flex items-center justify-center rounded-full border border-black/10 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950"
                     >
                       Ver preview
-                    </a>
-                  ) : null}
-
-                  {tablatura.pdfUrl ? (
-                    <a
-                      href={tablatura.pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
-                    >
-                      Abrir PDF
                     </a>
                   ) : null}
 

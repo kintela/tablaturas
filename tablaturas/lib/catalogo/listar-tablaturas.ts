@@ -21,7 +21,6 @@ type TablaturaRow = {
   descripcion: string | null;
   precio_venta_centimos: number;
   moneda: string;
-  grupos: GrupoRow | null;
   archivos_tablatura: ArchivoRow[];
 };
 
@@ -64,10 +63,6 @@ export async function listarTablaturasPublicadas(terminoBusqueda?: string) {
         descripcion,
         precio_venta_centimos,
         moneda,
-        grupos (
-          nombre,
-          slug
-        ),
         archivos_tablatura (
           tipo_archivo,
           bucket,
@@ -88,10 +83,25 @@ export async function listarTablaturasPublicadas(terminoBusqueda?: string) {
   const terminoNormalizado = terminoBusqueda?.trim().toLowerCase();
   const filas = (data ?? []) as TablaturaRow[];
 
+  const gruposIds = [...new Set(filas.map((tablatura) => tablatura.grupo_id))];
+
+  const { data: gruposData, error: gruposError } = await supabaseAdmin
+    .from("grupos")
+    .select("id, nombre, slug")
+    .in("id", gruposIds);
+
+  if (gruposError) {
+    throw new Error(gruposError.message);
+  }
+
+  const gruposPorId = new Map(
+    (gruposData ?? []).map((grupo) => [grupo.id, { nombre: grupo.nombre, slug: grupo.slug }])
+  );
+
   const filtradas = terminoNormalizado
     ? filas.filter((tablatura) => {
         const titulo = tablatura.titulo_cancion.toLowerCase();
-        const grupo = tablatura.grupos?.nombre.toLowerCase() ?? "";
+        const grupo = gruposPorId.get(tablatura.grupo_id)?.nombre.toLowerCase() ?? "";
         return (
           titulo.includes(terminoNormalizado) ||
           grupo.includes(terminoNormalizado)
@@ -100,8 +110,8 @@ export async function listarTablaturasPublicadas(terminoBusqueda?: string) {
     : filas;
 
   const ordenadas = [...filtradas].sort((a, b) => {
-    const grupoA = a.grupos?.nombre ?? "";
-    const grupoB = b.grupos?.nombre ?? "";
+    const grupoA = gruposPorId.get(a.grupo_id)?.nombre ?? "";
+    const grupoB = gruposPorId.get(b.grupo_id)?.nombre ?? "";
     const comparacionGrupo = grupoA.localeCompare(grupoB, "es", {
       sensitivity: "base",
     });
@@ -148,12 +158,7 @@ export async function listarTablaturasPublicadas(terminoBusqueda?: string) {
         descripcion: tablatura.descripcion,
         precioVentaCentimos: tablatura.precio_venta_centimos,
         moneda: tablatura.moneda,
-        grupo: tablatura.grupos
-          ? {
-              nombre: tablatura.grupos.nombre,
-              slug: tablatura.grupos.slug,
-            }
-          : null,
+        grupo: gruposPorId.get(tablatura.grupo_id) ?? null,
         previewUrl,
         pdfUrl,
       } satisfies TablaturaListado;
