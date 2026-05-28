@@ -18,6 +18,56 @@ function accesoPermitido(request: Request) {
   return Boolean(tokenEsperado && tokenRecibido === tokenEsperado);
 }
 
+async function listarRutasBucketRecursivamente(
+  bucket: string,
+  prefijo = ""
+): Promise<string[]> {
+  const { data, error } = await supabaseAdmin.storage.from(bucket).list(prefijo, {
+    limit: 1000,
+    offset: 0,
+    sortBy: { column: "name", order: "asc" },
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const rutas: string[] = [];
+
+  for (const entrada of data ?? []) {
+    const rutaActual = prefijo ? `${prefijo}/${entrada.name}` : entrada.name;
+
+    if (entrada.id === null) {
+      const rutasHijas = await listarRutasBucketRecursivamente(bucket, rutaActual);
+      rutas.push(...rutasHijas);
+      continue;
+    }
+
+    rutas.push(rutaActual);
+  }
+
+  return rutas;
+}
+
+async function vaciarBucket(bucket: string) {
+  const rutas = await listarRutasBucketRecursivamente(bucket);
+
+  if (rutas.length === 0) {
+    return;
+  }
+
+  const tamanoLote = 100;
+
+  for (let indice = 0; indice < rutas.length; indice += tamanoLote) {
+    const lote = rutas.slice(indice, indice + tamanoLote);
+    const { error } = await supabaseAdmin.storage.from(bucket).remove(lote);
+
+    if (error) {
+      throw error;
+    }
+  }
+}
+
 export async function POST(request: Request) {
   try {
     if (!accesoPermitido(request)) {
@@ -127,35 +177,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const { data: archivos, error: errorConsultaArchivos } = await supabaseAdmin
-      .from("archivos_tablatura")
-      .select("bucket, ruta");
-
-    if (errorConsultaArchivos) {
-      throw errorConsultaArchivos;
-    }
-
-    const rutasPorBucket = new Map<string, string[]>();
-
-    for (const archivo of archivos) {
-      const rutas = rutasPorBucket.get(archivo.bucket) ?? [];
-      rutas.push(archivo.ruta);
-      rutasPorBucket.set(archivo.bucket, rutas);
-    }
-
-    for (const [bucket, rutas] of rutasPorBucket.entries()) {
-      if (rutas.length === 0) {
-        continue;
-      }
-
-      const { error: errorStorage } = await supabaseAdmin.storage
-        .from(bucket)
-        .remove(rutas);
-
-      if (errorStorage) {
-        throw errorStorage;
-      }
-    }
+    await vaciarBucket("tablaturas");
 
     const { error: errorCompras } = await supabaseAdmin
       .from("compras")
