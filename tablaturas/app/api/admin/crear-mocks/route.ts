@@ -5,18 +5,8 @@ import {
   crearGruposMock,
   crearTablaturasMock,
 } from "@/lib/admin/datos-mock";
+import { esAdminActual } from "@/lib/supabase/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-
-function accesoPermitido(request: Request) {
-  if (process.env.NODE_ENV !== "production") {
-    return true;
-  }
-
-  const tokenEsperado = process.env.ADMIN_PANEL_TOKEN;
-  const tokenRecibido = request.headers.get("x-admin-token");
-
-  return Boolean(tokenEsperado && tokenRecibido === tokenEsperado);
-}
 
 async function listarRutasBucketRecursivamente(
   bucket: string,
@@ -70,7 +60,7 @@ async function vaciarBucket(bucket: string) {
 
 export async function POST(request: Request) {
   try {
-    if (!accesoPermitido(request)) {
+    if (!(await esAdminActual())) {
       return NextResponse.json(
         { error: "No autorizado para ejecutar esta acción." },
         { status: 403 }
@@ -170,7 +160,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    if (!accesoPermitido(request)) {
+    if (!(await esAdminActual())) {
       return NextResponse.json(
         { error: "No autorizado para ejecutar esta acción." },
         { status: 403 }

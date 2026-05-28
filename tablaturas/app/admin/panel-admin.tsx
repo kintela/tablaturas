@@ -40,7 +40,6 @@ const estadoInicialCatalogo: EstadoCatalogo = {
 
 export function PanelAdmin() {
   const [resultado, setResultado] = useState<ResultadoOperacion | null>(null);
-  const [tokenAdmin, setTokenAdmin] = useState("");
   const [confirmacionBorrado, setConfirmacionBorrado] = useState("");
   const [catalogo, setCatalogo] = useState<EstadoCatalogo>(estadoInicialCatalogo);
   const [cargandoCatalogo, setCargandoCatalogo] = useState(true);
@@ -67,9 +66,7 @@ export function PanelAdmin() {
   async function cargarCatalogo() {
     setCargandoCatalogo(true);
 
-    const response = await fetch("/api/admin/catalogo", {
-      headers: tokenAdmin ? { "x-admin-token": tokenAdmin } : undefined,
-    });
+    const response = await fetch("/api/admin/catalogo");
 
     const data = (await response.json()) as
       | { ok: true; grupos: Grupo[]; tablaturas: Tablatura[] }
@@ -108,7 +105,6 @@ export function PanelAdmin() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function crearMocks() {
@@ -117,7 +113,6 @@ export function PanelAdmin() {
 
       const response = await fetch("/api/admin/crear-mocks", {
         method: "POST",
-        headers: tokenAdmin ? { "x-admin-token": tokenAdmin } : undefined,
       });
 
       const data = (await response.json()) as ResultadoOperacion;
@@ -135,7 +130,6 @@ export function PanelAdmin() {
 
       const response = await fetch("/api/admin/crear-mocks", {
         method: "DELETE",
-        headers: tokenAdmin ? { "x-admin-token": tokenAdmin } : undefined,
       });
 
       const data = (await response.json()) as ResultadoOperacion;
@@ -158,7 +152,6 @@ export function PanelAdmin() {
 
       const response = await fetch("/api/admin/catalogo", {
         method: "POST",
-        headers: tokenAdmin ? { "x-admin-token": tokenAdmin } : undefined,
         body: formData,
       });
 
@@ -191,7 +184,6 @@ export function PanelAdmin() {
 
       const response = await fetch("/api/admin/catalogo", {
         method: "POST",
-        headers: tokenAdmin ? { "x-admin-token": tokenAdmin } : undefined,
         body: formData,
       });
 
@@ -224,33 +216,20 @@ export function PanelAdmin() {
       </div>
 
       <div className="mt-8 rounded-[1.5rem] bg-zinc-950 p-6 text-white">
-        <label className="block text-sm font-medium text-white/80" htmlFor="admin-token">
-          Token admin
-        </label>
-        <p className="mt-2 text-xs leading-6 text-white/60">
-          En local no hace falta. En producción, solo si defines
-          `ADMIN_PANEL_TOKEN`.
+        <p className="text-sm leading-7 text-white/75">
+          Esta zona ya está protegida por la sesión iniciada y por el rol
+          `admin`. Si puedes entrar aquí, puedes gestionar el catálogo.
         </p>
-        <div className="mt-4 flex flex-col gap-3 md:flex-row">
-          <input
-            id="admin-token"
-            type="password"
-            value={tokenAdmin}
-            onChange={(event) => setTokenAdmin(event.target.value)}
-            className="w-full rounded-full border border-white/15 bg-white/5 px-4 py-3 text-sm outline-none transition focus:border-white/40"
-            placeholder="Opcional"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              setResultado(null);
-              cargarCatalogo();
-            }}
-            className="rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/40"
-          >
-            Recargar catálogo
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setResultado(null);
+            cargarCatalogo();
+          }}
+          className="mt-4 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/40"
+        >
+          Recargar catálogo
+        </button>
       </div>
 
       <div className="mt-8 grid gap-6 xl:grid-cols-2">

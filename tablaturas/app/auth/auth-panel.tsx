@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import type { Session } from "@supabase/supabase-js";
 
@@ -123,6 +124,9 @@ function IconoOcultar() {
 }
 
 export function AuthPanel() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = getSupabaseBrowserClient();
   const [session, setSession] = useState<Session | null>(null);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
@@ -135,6 +139,14 @@ export function AuthPanel() {
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [cargandoAcceso, setCargandoAcceso] = useState(false);
   const [cerrandoSesion, setCerrandoSesion] = useState(false);
+
+  function limpiarParametrosAuth() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("auth");
+    params.delete("next");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  }
 
   useEffect(() => {
     let activa = true;
@@ -210,6 +222,17 @@ export function AuthPanel() {
     setPassword("");
     setModalAbierto(false);
     setCargandoAcceso(false);
+
+    const siguiente = searchParams.get("next");
+
+    if (siguiente?.startsWith("/")) {
+      router.push(siguiente);
+      return;
+    }
+
+    if (searchParams.get("auth") === "login") {
+      limpiarParametrosAuth();
+    }
   }
 
   async function crearCuenta() {
@@ -266,6 +289,8 @@ export function AuthPanel() {
   const nombreVisible =
     nombreCompleto || perfil?.nombre?.trim() || perfil?.email || session?.user.email || "Iniciar sesión";
   const emailVisible = perfil?.email || session?.user.email || null;
+  const modalVisible =
+    modalAbierto || (searchParams.get("auth") === "login" && !session);
 
   return (
     <>
@@ -317,11 +342,16 @@ export function AuthPanel() {
         </div>
       </div>
 
-      {typeof document !== "undefined" && modalAbierto
+      {typeof document !== "undefined" && modalVisible
         ? createPortal(
             <div
               className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 px-4 py-6"
-              onClick={() => setModalAbierto(false)}
+              onClick={() => {
+                setModalAbierto(false);
+                if (searchParams.get("auth") === "login") {
+                  limpiarParametrosAuth();
+                }
+              }}
             >
               <div
                 className="w-full max-w-md rounded-[2rem] border border-black/10 bg-white p-6 shadow-[0_30px_100px_rgba(15,23,42,0.22)]"
@@ -338,7 +368,12 @@ export function AuthPanel() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setModalAbierto(false)}
+                    onClick={() => {
+                      setModalAbierto(false);
+                      if (searchParams.get("auth") === "login") {
+                        limpiarParametrosAuth();
+                      }
+                    }}
                     className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 text-zinc-700 transition hover:border-zinc-950"
                     aria-label="Cerrar"
                   >

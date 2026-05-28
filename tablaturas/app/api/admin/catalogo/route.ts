@@ -1,17 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { esAdminActual } from "@/lib/supabase/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-
-function accesoPermitido(request: Request) {
-  if (process.env.NODE_ENV !== "production") {
-    return true;
-  }
-
-  const tokenEsperado = process.env.ADMIN_PANEL_TOKEN;
-  const tokenRecibido = request.headers.get("x-admin-token");
-
-  return Boolean(tokenEsperado && tokenRecibido === tokenEsperado);
-}
 
 function crearSlugBase(valor: string) {
   return valor
@@ -90,7 +80,7 @@ async function asegurarBucketTablaturas() {
 
 export async function GET(request: Request) {
   try {
-    if (!accesoPermitido(request)) {
+    if (!(await esAdminActual())) {
       return NextResponse.json({ error: "No autorizado." }, { status: 403 });
     }
 
@@ -129,7 +119,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!accesoPermitido(request)) {
+    if (!(await esAdminActual())) {
       return NextResponse.json({ error: "No autorizado." }, { status: 403 });
     }
 

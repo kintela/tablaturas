@@ -1,0 +1,40 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+import { normalizarSupabaseUrl } from "@/lib/supabase/normalizar-url";
+
+export async function getSupabaseServerClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error("Falta NEXT_PUBLIC_SUPABASE_URL");
+  }
+
+  if (!supabaseAnonKey) {
+    throw new Error("Falta NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  }
+
+  const cookieStore = await cookies();
+
+  return createServerClient(
+    normalizarSupabaseUrl(supabaseUrl),
+    supabaseAnonKey,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // In some server rendering contexts cookies are read-only.
+          }
+        },
+      },
+    }
+  );
+}

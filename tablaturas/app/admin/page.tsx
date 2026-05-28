@@ -1,10 +1,23 @@
+import { redirect } from "next/navigation";
+
+import { getUsuarioYPerfilActual } from "@/lib/supabase/auth";
 import { PanelAdmin } from "./panel-admin";
 
 export const metadata = {
   title: "Admin | Tablaturas",
 };
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  const { user, perfil } = await getUsuarioYPerfilActual();
+
+  if (!user) {
+    redirect("/?auth=login&next=/admin");
+  }
+
+  if (perfil?.rol !== "admin") {
+    redirect("/");
+  }
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#fff8dc_0%,#fff_40%,#f8fafc_100%)] px-6 py-10 text-zinc-950">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-10">
