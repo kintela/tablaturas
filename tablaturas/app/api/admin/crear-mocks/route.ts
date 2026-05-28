@@ -58,7 +58,7 @@ async function vaciarBucket(bucket: string) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     if (!(await esAdminActual())) {
       return NextResponse.json(
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE() {
   try {
     if (!(await esAdminActual())) {
       return NextResponse.json(

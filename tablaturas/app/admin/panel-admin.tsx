@@ -22,6 +22,7 @@ type Tablatura = {
   grupo_id: string;
   titulo_cancion: string;
   slug: string;
+  descripcion: string | null;
   precio_venta_centimos: number;
   moneda: string;
   publicada: boolean;
@@ -38,6 +39,63 @@ const estadoInicialCatalogo: EstadoCatalogo = {
   tablaturas: [],
 };
 
+function convertirPrecioTextoACentimos(valor: string) {
+  const normalizado = valor.replace(/\s/g, "").replace(",", ".");
+  const numero = Number(normalizado);
+
+  if (!Number.isFinite(numero) || numero < 0) {
+    return null;
+  }
+
+  return Math.round(numero * 100);
+}
+
+function formatearPrecio(precioVentaCentimos: number, moneda: string) {
+  return new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: moneda,
+  }).format(precioVentaCentimos / 100);
+}
+
+function IconoEditar() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function IconoPapelera() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  );
+}
+
 export function PanelAdmin() {
   const [resultado, setResultado] = useState<ResultadoOperacion | null>(null);
   const [confirmacionBorrado, setConfirmacionBorrado] = useState("");
@@ -45,29 +103,44 @@ export function PanelAdmin() {
   const [cargandoCatalogo, setCargandoCatalogo] = useState(true);
 
   const [nombreGrupo, setNombreGrupo] = useState("");
+  const [tablaturaEditandoId, setTablaturaEditandoId] = useState<string | null>(null);
   const [grupoSeleccionado, setGrupoSeleccionado] = useState("");
   const [tituloCancion, setTituloCancion] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [precioVentaCentimos, setPrecioVentaCentimos] = useState("499");
+  const [precioVenta, setPrecioVenta] = useState("4,99");
   const [archivoPdf, setArchivoPdf] = useState<File | null>(null);
+  const [archivoPreview, setArchivoPreview] = useState<File | null>(null);
   const [publicada, setPublicada] = useState(true);
 
   const [isPending, startTransition] = useTransition();
 
-  const gruposConTablaturas = useMemo(() => {
-    return catalogo.grupos.map((grupo) => ({
-      ...grupo,
-      tablaturas: catalogo.tablaturas.filter(
-        (tablatura) => tablatura.grupo_id === grupo.id
-      ),
-    }));
-  }, [catalogo]);
+  const gruposPorId = useMemo(
+    () => new Map(catalogo.grupos.map((grupo) => [grupo.id, grupo])),
+    [catalogo.grupos]
+  );
+
+  const tablaturasOrdenadas = useMemo(() => {
+    return [...catalogo.tablaturas].sort((a, b) => {
+      const grupoA = gruposPorId.get(a.grupo_id)?.nombre ?? "";
+      const grupoB = gruposPorId.get(b.grupo_id)?.nombre ?? "";
+      const comparacionGrupo = grupoA.localeCompare(grupoB, "es", {
+        sensitivity: "base",
+      });
+
+      if (comparacionGrupo !== 0) {
+        return comparacionGrupo;
+      }
+
+      return a.titulo_cancion.localeCompare(b.titulo_cancion, "es", {
+        sensitivity: "base",
+      });
+    });
+  }, [catalogo.tablaturas, gruposPorId]);
 
   async function cargarCatalogo() {
     setCargandoCatalogo(true);
 
     const response = await fetch("/api/admin/catalogo");
-
     const data = (await response.json()) as
       | { ok: true; grupos: Grupo[]; tablaturas: Tablatura[] }
       | { ok: false; error?: string };
@@ -107,21 +180,14 @@ export function PanelAdmin() {
     };
   }, []);
 
-  function crearMocks() {
-    startTransition(async () => {
-      setResultado(null);
-
-      const response = await fetch("/api/admin/crear-mocks", {
-        method: "POST",
-      });
-
-      const data = (await response.json()) as ResultadoOperacion;
-      setResultado(data);
-
-      if (response.ok && data.ok) {
-        await cargarCatalogo();
-      }
-    });
+  function resetFormularioTablatura() {
+    setTablaturaEditandoId(null);
+    setTituloCancion("");
+    setDescripcion("");
+    setPrecioVenta("4,99");
+    setArchivoPdf(null);
+    setArchivoPreview(null);
+    setPublicada(true);
   }
 
   function borrarDatos() {
@@ -137,6 +203,7 @@ export function PanelAdmin() {
       setConfirmacionBorrado("");
 
       if (response.ok && data.ok) {
+        resetFormularioTablatura();
         await cargarCatalogo();
       }
     });
@@ -165,21 +232,42 @@ export function PanelAdmin() {
     });
   }
 
-  function crearTablatura() {
+  function guardarTablatura() {
     startTransition(async () => {
       setResultado(null);
 
       const formData = new FormData();
-      formData.set("accion", "crear-tablatura");
+      const precioVentaCentimos = convertirPrecioTextoACentimos(precioVenta);
+
+      if (precioVentaCentimos === null) {
+        setResultado({
+          ok: false,
+          error: "El precio debe tener un formato válido. Ejemplo: 4,99",
+        });
+        return;
+      }
+
+      formData.set(
+        "accion",
+        tablaturaEditandoId ? "actualizar-tablatura" : "crear-tablatura"
+      );
       formData.set("grupoId", grupoSeleccionado);
       formData.set("tituloCancion", tituloCancion);
       formData.set("descripcion", descripcion);
-      formData.set("precioVentaCentimos", precioVentaCentimos);
+      formData.set("precioVentaCentimos", String(precioVentaCentimos));
       formData.set("moneda", "EUR");
       formData.set("publicada", String(publicada));
 
+      if (tablaturaEditandoId) {
+        formData.set("tablaturaId", tablaturaEditandoId);
+      }
+
       if (archivoPdf) {
         formData.set("archivo", archivoPdf);
+      }
+
+      if (archivoPreview) {
+        formData.set("preview", archivoPreview);
       }
 
       const response = await fetch("/api/admin/catalogo", {
@@ -191,10 +279,46 @@ export function PanelAdmin() {
       setResultado(data);
 
       if (response.ok && data.ok) {
-        setTituloCancion("");
-        setDescripcion("");
-        setPrecioVentaCentimos("499");
-        setArchivoPdf(null);
+        resetFormularioTablatura();
+        await cargarCatalogo();
+      }
+    });
+  }
+
+  function editarTablatura(tablatura: Tablatura) {
+    setTablaturaEditandoId(tablatura.id);
+    setGrupoSeleccionado(tablatura.grupo_id);
+    setTituloCancion(tablatura.titulo_cancion);
+    setDescripcion(tablatura.descripcion ?? "");
+    setPrecioVenta(
+      (tablatura.precio_venta_centimos / 100).toFixed(2).replace(".", ",")
+    );
+    setPublicada(tablatura.publicada);
+    setArchivoPdf(null);
+    setArchivoPreview(null);
+    setResultado(null);
+  }
+
+  function eliminarTablatura(tablaturaId: string) {
+    startTransition(async () => {
+      setResultado(null);
+
+      const formData = new FormData();
+      formData.set("accion", "eliminar-tablatura");
+      formData.set("tablaturaId", tablaturaId);
+
+      const response = await fetch("/api/admin/catalogo", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = (await response.json()) as ResultadoOperacion;
+      setResultado(data);
+
+      if (response.ok && data.ok) {
+        if (tablaturaEditandoId === tablaturaId) {
+          resetFormularioTablatura();
+        }
         await cargarCatalogo();
       }
     });
@@ -210,26 +334,114 @@ export function PanelAdmin() {
           Gestión del catálogo
         </h2>
         <p className="max-w-3xl text-sm leading-7 text-zinc-600">
-          Desde aquí puedes crear grupos, subir nuevas partituras PDF y revisar
-          qué contenido existe ya en Supabase.
+          Desde aquí puedes revisar las partituras existentes, editar sus datos,
+          eliminarlas o dar de alta nuevas entradas y grupos.
         </p>
       </div>
 
-      <div className="mt-8 rounded-[1.5rem] bg-zinc-950 p-6 text-white">
-        <p className="text-sm leading-7 text-white/75">
-          Esta zona ya está protegida por la sesión iniciada y por el rol
-          `admin`. Si puedes entrar aquí, puedes gestionar el catálogo.
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            setResultado(null);
-            cargarCatalogo();
-          }}
-          className="mt-4 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/40"
-        >
-          Recargar catálogo
-        </button>
+      <div className="mt-8 rounded-[1.5rem] border border-black/10 bg-zinc-50 p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-xl font-semibold text-zinc-950">
+              Partituras existentes
+            </h3>
+            <p className="mt-1 text-sm text-zinc-600">
+              {catalogo.tablaturas.length} partituras en {catalogo.grupos.length} grupos.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setResultado(null);
+                void cargarCatalogo();
+              }}
+              className="rounded-full border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-950"
+            >
+              Recargar catálogo
+            </button>
+          </div>
+        </div>
+
+        {cargandoCatalogo ? (
+          <p className="mt-6 text-sm text-zinc-600">Cargando catálogo...</p>
+        ) : tablaturasOrdenadas.length === 0 ? (
+          <p className="mt-6 text-sm text-zinc-600">
+            No hay partituras creadas todavía.
+          </p>
+        ) : (
+          <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-black/10 bg-white">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead className="bg-zinc-50 text-zinc-600">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Grupo</th>
+                  <th className="px-4 py-3 font-semibold">Canción</th>
+                  <th className="px-4 py-3 font-semibold">Precio</th>
+                  <th className="px-4 py-3 font-semibold">Estado</th>
+                  <th className="px-4 py-3 font-semibold">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tablaturasOrdenadas.map((tablatura) => (
+                  <tr
+                    key={tablatura.id}
+                    className="border-t border-black/10 align-top"
+                  >
+                    <td className="px-4 py-4 text-zinc-700">
+                      {gruposPorId.get(tablatura.grupo_id)?.nombre ?? "Grupo desconocido"}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="font-semibold text-zinc-950">
+                        {tablatura.titulo_cancion}
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">{tablatura.slug}</div>
+                    </td>
+                    <td className="px-4 py-4 text-zinc-700">
+                      {formatearPrecio(
+                        tablatura.precio_venta_centimos,
+                        tablatura.moneda
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          tablatura.publicada
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-zinc-100 text-zinc-700"
+                        }`}
+                      >
+                        {tablatura.publicada ? "Publicada" : "Oculta"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => editarTablatura(tablatura)}
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-700 transition hover:border-zinc-950 hover:text-zinc-950"
+                          title="Editar tablatura"
+                          aria-label="Editar tablatura"
+                        >
+                          <IconoEditar />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => eliminarTablatura(tablatura.id)}
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-700 transition hover:border-rose-500 hover:text-rose-800"
+                          title="Eliminar tablatura"
+                          aria-label="Eliminar tablatura"
+                        >
+                          <IconoPapelera />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="mt-8 grid gap-6 xl:grid-cols-2">
@@ -259,10 +471,27 @@ export function PanelAdmin() {
         </div>
 
         <div className="rounded-[1.5rem] border border-black/10 bg-zinc-50 p-6">
-          <h3 className="text-xl font-semibold text-zinc-950">Añadir tablatura</h3>
-          <p className="mt-2 text-sm leading-7 text-zinc-600">
-            Selecciona el grupo, indica los datos de la canción y sube el PDF.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-xl font-semibold text-zinc-950">
+                {tablaturaEditandoId ? "Editar tablatura" : "Añadir tablatura"}
+              </h3>
+              <p className="mt-2 text-sm leading-7 text-zinc-600">
+                {tablaturaEditandoId
+                  ? "Modifica los datos y, si quieres, sustituye también el PDF o la imagen preview."
+                  : "Selecciona el grupo, indica los datos de la canción y sube el PDF junto con una imagen preview."}
+              </p>
+            </div>
+            {tablaturaEditandoId ? (
+              <button
+                type="button"
+                onClick={resetFormularioTablatura}
+                className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-950"
+              >
+                Cancelar
+              </button>
+            ) : null}
+          </div>
 
           <div className="mt-5 grid gap-4">
             <select
@@ -294,13 +523,12 @@ export function PanelAdmin() {
             />
 
             <input
-              type="number"
-              min="0"
-              step="1"
-              value={precioVentaCentimos}
-              onChange={(event) => setPrecioVentaCentimos(event.target.value)}
+              type="text"
+              inputMode="decimal"
+              value={precioVenta}
+              onChange={(event) => setPrecioVenta(event.target.value)}
               className="w-full rounded-full border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-950"
-              placeholder="Precio en céntimos"
+              placeholder="Precio de venta. Ejemplo: 4,99"
             />
 
             <label className="flex items-center gap-3 rounded-full border border-black/10 bg-white px-4 py-3 text-sm text-zinc-700">
@@ -309,126 +537,70 @@ export function PanelAdmin() {
                 checked={publicada}
                 onChange={(event) => setPublicada(event.target.checked)}
               />
-              Publicar esta tablatura al crearla
+              Publicar esta tablatura
             </label>
 
-            <input
-              type="file"
-              accept="application/pdf,.pdf"
-              onChange={(event) =>
-                setArchivoPdf(event.target.files?.[0] ?? null)
-              }
-              className="w-full rounded-[1.5rem] border border-dashed border-black/15 bg-white px-4 py-4 text-sm"
-            />
+            <label className="flex flex-col gap-2 rounded-[1.5rem] border border-dashed border-black/15 bg-white px-4 py-4 text-sm text-zinc-700">
+              <span className="font-medium text-zinc-950">
+                {tablaturaEditandoId
+                  ? "Archivo de la partitura (PDF) para sustituir el actual"
+                  : "Archivo de la partitura (PDF)"}
+              </span>
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(event) => setArchivoPdf(event.target.files?.[0] ?? null)}
+                className="text-sm"
+              />
+              {tablaturaEditandoId ? (
+                <span className="text-xs text-zinc-500">
+                  Déjalo vacío si quieres conservar el PDF actual.
+                </span>
+              ) : null}
+            </label>
+
+            <label className="flex flex-col gap-2 rounded-[1.5rem] border border-dashed border-black/15 bg-white px-4 py-4 text-sm text-zinc-700">
+              <span className="font-medium text-zinc-950">
+                {tablaturaEditandoId
+                  ? "Archivo de preview (imagen) para sustituir la actual"
+                  : "Archivo de preview (imagen)"}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) =>
+                  setArchivoPreview(event.target.files?.[0] ?? null)
+                }
+                className="text-sm"
+              />
+              {tablaturaEditandoId ? (
+                <span className="text-xs text-zinc-500">
+                  Déjalo vacío si quieres conservar la preview actual.
+                </span>
+              ) : null}
+            </label>
 
             <button
               type="button"
-              onClick={crearTablatura}
+              onClick={guardarTablatura}
               disabled={
                 isPending ||
                 !grupoSeleccionado ||
                 !tituloCancion.trim() ||
-                !archivoPdf
+                (!tablaturaEditandoId && !archivoPdf)
               }
               className="rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isPending ? "Subiendo..." : "Crear tablatura y subir PDF"}
+              {isPending
+                ? tablaturaEditandoId
+                  ? "Guardando cambios..."
+                  : "Subiendo..."
+                : tablaturaEditandoId
+                  ? "Guardar cambios"
+                  : "Crear tablatura y subir PDF"}
             </button>
           </div>
         </div>
-      </div>
-
-      <div className="mt-8 grid gap-6 md:grid-cols-[1.4fr_0.8fr]">
-        <div className="rounded-[1.5rem] bg-zinc-50 p-6">
-          <h3 className="text-lg font-semibold text-zinc-950">Datos mock del catálogo</h3>
-          <ul className="mt-4 space-y-3 text-sm text-zinc-700">
-            <li>10 grupos con nombre y slug.</li>
-            <li>30 tablaturas publicadas con precio y descripción.</li>
-            <li>60 archivos mock en storage: un PDF y una imagen previa por tablatura.</li>
-            <li>
-              Rutas con formato <code>{"{grupo_id}/{tablatura_id}/partitura.pdf"}</code> y{" "}
-              <code>preview.svg</code>.
-            </li>
-          </ul>
-        </div>
-
-        <div className="rounded-[1.5rem] bg-zinc-950 p-6 text-white">
-          <p className="text-sm leading-7 text-white/75">
-            Usa los mocks para poblar rápido el catálogo y probar búsquedas,
-            previews y carrito.
-          </p>
-          <button
-            type="button"
-            onClick={crearMocks}
-            disabled={isPending}
-            className="mt-5 w-full rounded-full bg-[#ffd84d] px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-[#ffcf1a] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isPending ? "Creando datos..." : "Crear datos mock"}
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-8 rounded-[1.5rem] border border-black/10 bg-white p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-xl font-semibold text-zinc-950">Catálogo actual</h3>
-            <p className="mt-1 text-sm text-zinc-600">
-              {catalogo.grupos.length} grupos y {catalogo.tablaturas.length} tablaturas.
-            </p>
-          </div>
-        </div>
-
-        {cargandoCatalogo ? (
-          <p className="mt-6 text-sm text-zinc-600">Cargando catálogo...</p>
-        ) : gruposConTablaturas.length === 0 ? (
-          <p className="mt-6 text-sm text-zinc-600">
-            No hay grupos creados todavía.
-          </p>
-        ) : (
-          <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-black/10">
-            <table className="w-full border-collapse text-left text-sm">
-              <thead className="bg-zinc-50 text-zinc-600">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Grupo</th>
-                  <th className="px-4 py-3 font-semibold">Slug</th>
-                  <th className="px-4 py-3 font-semibold">Partituras</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gruposConTablaturas.map((grupo) => (
-                  <tr key={grupo.id} className="border-t border-black/10 align-top">
-                    <td className="px-4 py-4 font-semibold text-zinc-950">{grupo.nombre}</td>
-                    <td className="px-4 py-4 text-zinc-600">{grupo.slug}</td>
-                    <td className="px-4 py-4">
-                      {grupo.tablaturas.length === 0 ? (
-                        <span className="text-zinc-500">Sin partituras</span>
-                      ) : (
-                        <div className="flex flex-col gap-2">
-                          {grupo.tablaturas.map((tablatura) => (
-                            <div
-                              key={tablatura.id}
-                              className="rounded-[1rem] border border-black/10 bg-zinc-50 px-3 py-2"
-                            >
-                              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                                <span className="font-medium text-zinc-950">
-                                  {tablatura.titulo_cancion}
-                                </span>
-                                <span className="text-xs text-zinc-500">
-                                  {tablatura.slug} · {tablatura.precio_venta_centimos} cts ·{" "}
-                                  {tablatura.publicada ? "Publicada" : "Oculta"}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
       <div className="mt-8 rounded-[1.5rem] border border-rose-200 bg-rose-50 p-6">
