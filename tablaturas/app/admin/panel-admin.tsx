@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import type { DragEvent } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 
 type ResultadoOperacion = {
   ok: boolean;
@@ -93,6 +94,75 @@ function IconoPapelera() {
       <path d="M10 11v6" />
       <path d="M14 11v6" />
     </svg>
+  );
+}
+
+type DropzoneArchivoProps = {
+  titulo: string;
+  descripcion?: string;
+  accept: string;
+  archivo: File | null;
+  onSeleccionar: (archivo: File | null) => void;
+};
+
+function DropzoneArchivo({
+  titulo,
+  descripcion,
+  accept,
+  archivo,
+  onSeleccionar,
+}: DropzoneArchivoProps) {
+  const [arrastrando, setArrastrando] = useState(false);
+  const inputId = useId();
+
+  function manejarDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setArrastrando(false);
+
+    const fichero = event.dataTransfer.files?.[0] ?? null;
+    onSeleccionar(fichero);
+  }
+
+  return (
+    <label
+      htmlFor={inputId}
+      onDragOver={(event) => {
+        event.preventDefault();
+        setArrastrando(true);
+      }}
+      onDragEnter={(event) => {
+        event.preventDefault();
+        setArrastrando(true);
+      }}
+      onDragLeave={(event) => {
+        event.preventDefault();
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          return;
+        }
+        setArrastrando(false);
+      }}
+      onDrop={manejarDrop}
+      className={`flex cursor-pointer flex-col gap-2 rounded-[1.5rem] border border-dashed bg-white px-4 py-4 text-sm text-zinc-700 transition ${
+        arrastrando
+          ? "border-zinc-950 bg-zinc-50"
+          : "border-black/15 hover:border-zinc-500"
+      }`}
+    >
+      <span className="font-medium text-zinc-950">{titulo}</span>
+      <span className="text-xs text-zinc-500">
+        {archivo
+          ? `Archivo seleccionado: ${archivo.name}`
+          : "Arrastra aquí el archivo o pulsa para seleccionarlo"}
+      </span>
+      {descripcion ? <span className="text-xs text-zinc-500">{descripcion}</span> : null}
+      <input
+        id={inputId}
+        type="file"
+        accept={accept}
+        onChange={(event) => onSeleccionar(event.target.files?.[0] ?? null)}
+        className="hidden"
+      />
+    </label>
   );
 }
 
@@ -540,45 +610,37 @@ export function PanelAdmin() {
               Publicar esta tablatura
             </label>
 
-            <label className="flex flex-col gap-2 rounded-[1.5rem] border border-dashed border-black/15 bg-white px-4 py-4 text-sm text-zinc-700">
-              <span className="font-medium text-zinc-950">
-                {tablaturaEditandoId
+            <DropzoneArchivo
+              titulo={
+                tablaturaEditandoId
                   ? "Archivo de la partitura (PDF) para sustituir el actual"
-                  : "Archivo de la partitura (PDF)"}
-              </span>
-              <input
-                type="file"
-                accept="application/pdf,.pdf"
-                onChange={(event) => setArchivoPdf(event.target.files?.[0] ?? null)}
-                className="text-sm"
-              />
-              {tablaturaEditandoId ? (
-                <span className="text-xs text-zinc-500">
-                  Déjalo vacío si quieres conservar el PDF actual.
-                </span>
-              ) : null}
-            </label>
+                  : "Archivo de la partitura (PDF)"
+              }
+              descripcion={
+                tablaturaEditandoId
+                  ? "Déjalo vacío si quieres conservar el PDF actual."
+                  : undefined
+              }
+              accept="application/pdf,.pdf"
+              archivo={archivoPdf}
+              onSeleccionar={setArchivoPdf}
+            />
 
-            <label className="flex flex-col gap-2 rounded-[1.5rem] border border-dashed border-black/15 bg-white px-4 py-4 text-sm text-zinc-700">
-              <span className="font-medium text-zinc-950">
-                {tablaturaEditandoId
+            <DropzoneArchivo
+              titulo={
+                tablaturaEditandoId
                   ? "Archivo de preview (imagen) para sustituir la actual"
-                  : "Archivo de preview (imagen)"}
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(event) =>
-                  setArchivoPreview(event.target.files?.[0] ?? null)
-                }
-                className="text-sm"
-              />
-              {tablaturaEditandoId ? (
-                <span className="text-xs text-zinc-500">
-                  Déjalo vacío si quieres conservar la preview actual.
-                </span>
-              ) : null}
-            </label>
+                  : "Archivo de preview (imagen)"
+              }
+              descripcion={
+                tablaturaEditandoId
+                  ? "Déjalo vacío si quieres conservar la preview actual."
+                  : undefined
+              }
+              accept="image/*"
+              archivo={archivoPreview}
+              onSeleccionar={setArchivoPreview}
+            />
 
             <button
               type="button"

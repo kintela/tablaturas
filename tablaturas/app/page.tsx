@@ -211,9 +211,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   {grupo.items.map((tablatura) => (
                     <article
                       key={tablatura.id}
-                      className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
+                      className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
                     >
-                      <div className="aspect-[16/9] bg-zinc-100">
+                      <div className="h-32 flex-shrink-0 bg-zinc-100 sm:h-36 xl:h-32 2xl:h-36">
                         {tablatura.previewUrl ? (
                           <img
                             src={tablatura.previewUrl}
@@ -227,46 +227,46 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                         )}
                       </div>
 
-                      <div className="flex flex-col gap-5 p-6">
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
-                              {tablatura.grupo?.nombre ?? "Grupo sin nombre"}
-                            </p>
-                            <h3 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-950">
-                              {tablatura.tituloCancion}
-                            </h3>
-                          </div>
-                          <span className="rounded-full bg-amber-200 px-3 py-2 text-sm font-semibold text-zinc-950">
-                            {formatearPrecio(
-                              tablatura.precioVentaCentimos,
-                              tablatura.moneda
-                            )}
-                          </span>
+                      <div className="flex flex-1 flex-col gap-5 p-6">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                            {tablatura.grupo?.nombre ?? "Grupo sin nombre"}
+                          </p>
+                          <h3 className="mt-3 text-xl font-semibold tracking-tight text-zinc-950">
+                            {tablatura.tituloCancion}
+                          </h3>
                         </div>
 
-                        <p className="min-h-14 text-sm leading-7 text-zinc-600">
-                          {tablatura.descripcion ?? "Sin descripción disponible."}
-                        </p>
+                        <div className="mt-auto flex items-end justify-between gap-3">
+                          <div className="flex flex-wrap gap-3">
+                            {tablatura.previewUrl ? (
+                              <BotonPreview
+                                previewUrl={tablatura.previewUrl}
+                                titulo={tablatura.tituloCancion}
+                              />
+                            ) : null}
+                          </div>
 
-                        <div className="flex flex-wrap gap-3">
-                          {tablatura.previewUrl ? (
-                            <BotonPreview
-                              previewUrl={tablatura.previewUrl}
-                              titulo={tablatura.tituloCancion}
+                          <div className="flex shrink-0 flex-col items-end gap-3">
+                            <span className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-zinc-950">
+                              {formatearPrecio(
+                                tablatura.precioVentaCentimos,
+                                tablatura.moneda
+                              )}
+                            </span>
+
+                            <BotonCarrito
+                              item={{
+                                id: tablatura.id,
+                                titulo: tablatura.tituloCancion,
+                                grupoNombre:
+                                  tablatura.grupo?.nombre ?? "Grupo sin nombre",
+                                precioVentaCentimos: tablatura.precioVentaCentimos,
+                                moneda: tablatura.moneda,
+                                previewUrl: tablatura.previewUrl,
+                              }}
                             />
-                          ) : null}
-
-                          <BotonCarrito
-                            item={{
-                              id: tablatura.id,
-                              titulo: tablatura.tituloCancion,
-                              grupoNombre: tablatura.grupo?.nombre ?? "Grupo sin nombre",
-                              precioVentaCentimos: tablatura.precioVentaCentimos,
-                              moneda: tablatura.moneda,
-                              previewUrl: tablatura.previewUrl,
-                            }}
-                          />
+                          </div>
                         </div>
                       </div>
                     </article>
@@ -291,9 +291,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           {resultados.map((tablatura) => (
             <article
               key={tablatura.id}
-              className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
+              className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
             >
-              <div className="aspect-[16/9] bg-zinc-100">
+              <div className="h-32 flex-shrink-0 bg-zinc-100 sm:h-36 xl:h-32 2xl:h-36">
                 {tablatura.previewUrl ? (
                   <img
                     src={tablatura.previewUrl}
@@ -307,46 +307,46 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 )}
               </div>
 
-              <div className="flex flex-col gap-5 p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
-                      {tablatura.grupo?.nombre ?? "Grupo sin nombre"}
-                    </p>
-                    <h2 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-950">
-                      {tablatura.tituloCancion}
-                    </h2>
-                  </div>
-                  <span className="rounded-full bg-amber-200 px-3 py-2 text-sm font-semibold text-zinc-950">
-                    {formatearPrecio(
-                      tablatura.precioVentaCentimos,
-                      tablatura.moneda
-                    )}
-                  </span>
+              <div className="flex flex-1 flex-col gap-5 p-6">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                    {tablatura.grupo?.nombre ?? "Grupo sin nombre"}
+                  </p>
+                  <h2 className="mt-3 text-xl font-semibold tracking-tight text-zinc-950">
+                    {tablatura.tituloCancion}
+                  </h2>
                 </div>
 
-                <p className="min-h-14 text-sm leading-7 text-zinc-600">
-                  {tablatura.descripcion ?? "Sin descripción disponible."}
-                </p>
+                <div className="mt-auto flex items-end justify-between gap-3">
+                  <div className="flex flex-wrap gap-3">
+                    {tablatura.previewUrl ? (
+                      <BotonPreview
+                        previewUrl={tablatura.previewUrl}
+                        titulo={tablatura.tituloCancion}
+                      />
+                    ) : null}
+                  </div>
 
-                <div className="flex flex-wrap gap-3">
-                  {tablatura.previewUrl ? (
-                    <BotonPreview
-                      previewUrl={tablatura.previewUrl}
-                      titulo={tablatura.tituloCancion}
+                  <div className="flex shrink-0 flex-col items-end gap-3">
+                    <span className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-zinc-950">
+                      {formatearPrecio(
+                        tablatura.precioVentaCentimos,
+                        tablatura.moneda
+                      )}
+                    </span>
+
+                    <BotonCarrito
+                      item={{
+                        id: tablatura.id,
+                        titulo: tablatura.tituloCancion,
+                        grupoNombre:
+                          tablatura.grupo?.nombre ?? "Grupo sin nombre",
+                        precioVentaCentimos: tablatura.precioVentaCentimos,
+                        moneda: tablatura.moneda,
+                        previewUrl: tablatura.previewUrl,
+                      }}
                     />
-                  ) : null}
-
-                  <BotonCarrito
-                    item={{
-                      id: tablatura.id,
-                      titulo: tablatura.tituloCancion,
-                      grupoNombre: tablatura.grupo?.nombre ?? "Grupo sin nombre",
-                      precioVentaCentimos: tablatura.precioVentaCentimos,
-                      moneda: tablatura.moneda,
-                      previewUrl: tablatura.previewUrl,
-                    }}
-                  />
+                  </div>
                 </div>
               </div>
             </article>

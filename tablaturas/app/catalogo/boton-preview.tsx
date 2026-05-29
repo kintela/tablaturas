@@ -36,7 +36,7 @@ export function BotonPreview({ previewUrl, titulo }: BotonPreviewProps) {
         onClick={() => setAbierto(true)}
         className="inline-flex items-center justify-center rounded-full border border-black/10 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:border-zinc-950"
       >
-        Ver preview
+        Preview
       </button>
 
       {typeof document !== "undefined" && abierto
