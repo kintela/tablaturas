@@ -168,7 +168,6 @@ function DropzoneArchivo({
 
 export function PanelAdmin() {
   const [resultado, setResultado] = useState<ResultadoOperacion | null>(null);
-  const [confirmacionBorrado, setConfirmacionBorrado] = useState("");
   const [catalogo, setCatalogo] = useState<EstadoCatalogo>(estadoInicialCatalogo);
   const [cargandoCatalogo, setCargandoCatalogo] = useState(true);
 
@@ -258,25 +257,6 @@ export function PanelAdmin() {
     setArchivoPdf(null);
     setArchivoPreview(null);
     setPublicada(true);
-  }
-
-  function borrarDatos() {
-    startTransition(async () => {
-      setResultado(null);
-
-      const response = await fetch("/api/admin/crear-mocks", {
-        method: "DELETE",
-      });
-
-      const data = (await response.json()) as ResultadoOperacion;
-      setResultado(data);
-      setConfirmacionBorrado("");
-
-      if (response.ok && data.ok) {
-        resetFormularioTablatura();
-        await cargarCatalogo();
-      }
-    });
   }
 
   function crearGrupo() {
@@ -662,42 +642,6 @@ export function PanelAdmin() {
                   : "Crear tablatura y subir PDF"}
             </button>
           </div>
-        </div>
-      </div>
-
-      <div className="mt-8 rounded-[1.5rem] border border-rose-200 bg-rose-50 p-6">
-        <h3 className="text-lg font-semibold text-rose-950">Zona peligrosa</h3>
-        <p className="mt-2 max-w-2xl text-sm leading-7 text-rose-900/80">
-          Esta acción elimina todos los registros de `compras`, `tablaturas`,
-          `grupos`, `archivos_tablatura` y también los archivos físicos del
-          bucket `tablaturas`.
-        </p>
-
-        <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-end">
-          <div className="flex-1">
-            <label
-              className="block text-sm font-medium text-rose-950"
-              htmlFor="confirmacion-borrado"
-            >
-              Escribe BORRAR para confirmar
-            </label>
-            <input
-              id="confirmacion-borrado"
-              type="text"
-              value={confirmacionBorrado}
-              onChange={(event) => setConfirmacionBorrado(event.target.value)}
-              className="mt-2 w-full rounded-full border border-rose-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-rose-500"
-              placeholder="BORRAR"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={borrarDatos}
-            disabled={isPending || confirmacionBorrado !== "BORRAR"}
-            className="rounded-full bg-rose-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isPending ? "Eliminando datos..." : "Eliminar todos los datos"}
-          </button>
         </div>
       </div>
 

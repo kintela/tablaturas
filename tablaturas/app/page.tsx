@@ -150,27 +150,29 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               >
                 Agrupar
               </Link>
-              {[
-                { valor: "3", etiqueta: "3 por fila" },
-                { valor: "4", etiqueta: "4 por fila" },
-                { valor: "6", etiqueta: "6 por fila" },
-              ].map((opcion) => {
-                const activa = columnas === opcion.valor;
+              <div className="hidden flex-wrap gap-2 sm:flex">
+                {[
+                  { valor: "3", etiqueta: "3 por fila" },
+                  { valor: "4", etiqueta: "4 por fila" },
+                  { valor: "6", etiqueta: "6 por fila" },
+                ].map((opcion) => {
+                  const activa = columnas === opcion.valor;
 
-                return (
-                  <Link
-                    key={opcion.valor}
-                    href={crearHrefConVista(terminoBusqueda, opcion.valor, vista)}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                      activa
-                        ? "bg-zinc-950 text-white"
-                        : "border border-black/10 bg-white text-zinc-700 hover:border-zinc-950"
-                    }`}
-                  >
-                    {opcion.etiqueta}
-                  </Link>
-                );
-              })}
+                  return (
+                    <Link
+                      key={opcion.valor}
+                      href={crearHrefConVista(terminoBusqueda, opcion.valor, vista)}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        activa
+                          ? "bg-zinc-950 text-white"
+                          : "border border-black/10 bg-white text-zinc-700 hover:border-zinc-950"
+                      }`}
+                    >
+                      {opcion.etiqueta}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
