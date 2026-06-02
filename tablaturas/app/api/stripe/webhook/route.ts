@@ -4,6 +4,19 @@ import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getStripeServerClient } from "@/lib/stripe/server";
 
+function obtenerValidadoPorAppBanco(charge: Stripe.Charge | null) {
+  const threeDSecure = charge?.payment_method_details?.card?.three_d_secure;
+
+  if (
+    threeDSecure?.result === "authenticated" &&
+    threeDSecure.authentication_flow === "challenge"
+  ) {
+    return "si";
+  }
+
+  return "no";
+}
+
 export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -34,6 +47,21 @@ export async function POST(request: Request) {
             : null;
 
         const fechaPago = new Date().toISOString();
+        let validadoporappbanco: "si" | "no" = "no";
+
+        if (paymentIntentId) {
+          const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+            expand: ["latest_charge"],
+          });
+
+          const latestCharge =
+            paymentIntent.latest_charge &&
+            typeof paymentIntent.latest_charge !== "string"
+              ? paymentIntent.latest_charge
+              : null;
+
+          validadoporappbanco = obtenerValidadoPorAppBanco(latestCharge);
+        }
 
         const { error: pedidoError } = await supabaseAdmin
           .from("pedidos")
@@ -44,6 +72,7 @@ export async function POST(request: Request) {
             payment_intent_id: paymentIntentId,
             fecha_pago: fechaPago,
             proveedor_pago: "stripe",
+            validadoporappbanco,
           })
           .eq("id", pedidoId);
 

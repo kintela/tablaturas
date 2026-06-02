@@ -139,6 +139,11 @@ export async function POST(request: Request) {
       mode: "payment",
       success_url: `${origin}/checkout/exito?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/checkout/cancelado?pedido_id=${pedido.id}`,
+      payment_method_options: {
+        card: {
+          request_three_d_secure: "challenge",
+        },
+      },
       customer_email: user.email ?? undefined,
       metadata: {
         pedido_id: pedido.id,
