@@ -6,6 +6,7 @@ import {
   anadirAlCarrito,
   estaEnCarrito,
   quitarDelCarrito,
+  sincronizarCarritoConCatalogo,
   type ItemCarrito,
 } from "@/app/catalogo/carrito-store";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -37,6 +38,7 @@ export function BotonCarrito({ item }: BotonCarritoProps) {
   const supabase = getSupabaseBrowserClient();
   const [autenticado, setAutenticado] = useState(false);
   const [enCarrito, setEnCarrito] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -85,19 +87,28 @@ export function BotonCarrito({ item }: BotonCarritoProps) {
       : "Añadir al carrito"
     : "Para poder hacer una compra antes has de iniciar sesion con tu cuenta. Si no la has creado aún este es un buen momento";
 
-  function manejarClick() {
-    if (!autenticado) {
+  async function manejarClick() {
+    if (!autenticado || sincronizando) {
       return;
     }
 
-    if (enCarrito) {
-      quitarDelCarrito(item.id);
-      setEnCarrito(false);
-      return;
-    }
+    setSincronizando(true);
 
-    anadirAlCarrito(item);
-    setEnCarrito(true);
+    try {
+      await sincronizarCarritoConCatalogo(supabase);
+      const itemSigueEnCarrito = estaEnCarrito(item.id);
+
+      if (itemSigueEnCarrito) {
+        quitarDelCarrito(item.id);
+        setEnCarrito(false);
+        return;
+      }
+
+      anadirAlCarrito(item);
+      setEnCarrito(true);
+    } finally {
+      setSincronizando(false);
+    }
   }
 
   return (
@@ -106,7 +117,9 @@ export function BotonCarrito({ item }: BotonCarritoProps) {
         type="button"
         disabled={!autenticado}
         aria-label={tooltip}
-        onClick={manejarClick}
+        onClick={() => {
+          void manejarClick();
+        }}
         className={`inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${
           autenticado
             ? enCarrito

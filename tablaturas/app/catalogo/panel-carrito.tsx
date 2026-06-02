@@ -7,6 +7,7 @@ import {
   escucharCarrito,
   leerCarrito,
   quitarDelCarrito,
+  sincronizarCarritoConCatalogo,
   type ItemCarrito,
   vaciarCarrito,
 } from "@/app/catalogo/carrito-store";
@@ -43,9 +44,31 @@ export function PanelCarrito() {
   const [abierto, setAbierto] = useState(false);
   const [autenticado, setAutenticado] = useState(false);
   const [items, setItems] = useState<ItemCarrito[]>([]);
+  const [procesandoCheckout, setProcesandoCheckout] = useState(false);
+  const [errorCheckout, setErrorCheckout] = useState<string | null>(null);
 
   useEffect(() => {
     let activo = true;
+
+    async function sincronizarEstado(autenticadoActual: boolean) {
+      setAutenticado(autenticadoActual);
+
+      try {
+        const itemsSincronizados = await sincronizarCarritoConCatalogo(supabase);
+
+        if (!activo) {
+          return;
+        }
+
+        setItems(itemsSincronizados);
+      } catch {
+        if (!activo) {
+          return;
+        }
+
+        setItems(leerCarrito());
+      }
+    }
 
     async function cargarEstado() {
       const {
@@ -56,8 +79,7 @@ export function PanelCarrito() {
         return;
       }
 
-      setAutenticado(Boolean(session));
-      setItems(leerCarrito());
+      await sincronizarEstado(Boolean(session));
     }
 
     cargarEstado();
@@ -65,8 +87,8 @@ export function PanelCarrito() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setAutenticado(Boolean(nextSession));
-      setItems(leerCarrito());
+      setErrorCheckout(null);
+      void sincronizarEstado(Boolean(nextSession));
     });
 
     const cancelar = escucharCarrito((siguiente) => {
@@ -84,6 +106,44 @@ export function PanelCarrito() {
     () => items.reduce((acumulado, item) => acumulado + item.precioVentaCentimos, 0),
     [items]
   );
+
+  async function irACheckout() {
+    if (!autenticado || items.length === 0 || procesandoCheckout) {
+      return;
+    }
+
+    setProcesandoCheckout(true);
+    setErrorCheckout(null);
+
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: items.map((item) => ({ id: item.id })),
+        }),
+      });
+
+      const data = (await response.json()) as {
+        ok: boolean;
+        url?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !data.ok || !data.url) {
+        setErrorCheckout(data.error ?? "No se pudo iniciar el pago.");
+        setProcesandoCheckout(false);
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch {
+      setErrorCheckout("No se pudo iniciar el pago.");
+      setProcesandoCheckout(false);
+    }
+  }
 
   return (
     <>
@@ -199,23 +259,33 @@ export function PanelCarrito() {
                   <div className="mt-5 flex gap-3">
                     <button
                       type="button"
-                      onClick={() => vaciarCarrito()}
+                      onClick={() => {
+                        vaciarCarrito();
+                        setErrorCheckout(null);
+                      }}
                       className="flex-1 rounded-full border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-950"
                     >
                       Vaciar
                     </button>
                     <button
                       type="button"
-                      disabled={!autenticado || items.length === 0}
+                      onClick={() => {
+                        void irACheckout();
+                      }}
+                      disabled={!autenticado || items.length === 0 || procesandoCheckout}
                       className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition ${
-                        autenticado && items.length > 0
+                        autenticado && items.length > 0 && !procesandoCheckout
                           ? "bg-zinc-950 text-white hover:bg-zinc-800"
                           : "cursor-not-allowed bg-zinc-200 text-zinc-500"
                       }`}
                     >
-                      Comprar
+                      {procesandoCheckout ? "Redirigiendo..." : "Comprar"}
                     </button>
                   </div>
+
+                  {errorCheckout ? (
+                    <p className="mt-3 text-sm text-rose-600">{errorCheckout}</p>
+                  ) : null}
                 </div>
               </aside>
             </div>,

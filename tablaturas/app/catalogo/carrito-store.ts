@@ -1,5 +1,7 @@
 "use client";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 export type ItemCarrito = {
   id: string;
   titulo: string;
@@ -68,6 +70,42 @@ export function quitarDelCarrito(itemId: string) {
 
 export function vaciarCarrito() {
   guardarCarrito([]);
+}
+
+export async function sincronizarCarritoConCatalogo(supabase: SupabaseClient) {
+  const actual = leerCarritoDesdeStorage();
+
+  if (actual.length === 0) {
+    return actual;
+  }
+
+  const itemIds = Array.from(
+    new Set(actual.map((item) => item.id.trim()).filter((itemId) => itemId.length > 0))
+  );
+
+  if (itemIds.length === 0) {
+    guardarCarrito([]);
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("tablaturas")
+    .select("id")
+    .in("id", itemIds)
+    .eq("publicada", true);
+
+  if (error) {
+    throw error;
+  }
+
+  const idsValidos = new Set((data ?? []).map((tablatura) => tablatura.id));
+  const siguiente = actual.filter((item) => idsValidos.has(item.id));
+
+  if (siguiente.length !== actual.length) {
+    guardarCarrito(siguiente);
+  }
+
+  return siguiente;
 }
 
 export function escucharCarrito(callback: (items: ItemCarrito[]) => void) {
