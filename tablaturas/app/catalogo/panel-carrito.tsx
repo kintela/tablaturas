@@ -7,7 +7,7 @@ import {
   escucharCarrito,
   leerCarrito,
   quitarDelCarrito,
-  sincronizarCarritoConCatalogo,
+  sincronizarCarritoConServidor,
   type ItemCarrito,
   vaciarCarrito,
 } from "@/app/catalogo/carrito-store";
@@ -54,7 +54,9 @@ export function PanelCarrito() {
       setAutenticado(autenticadoActual);
 
       try {
-        const itemsSincronizados = await sincronizarCarritoConCatalogo(supabase);
+        const itemsSincronizados = autenticadoActual
+          ? await sincronizarCarritoConServidor(supabase)
+          : await leerCarrito();
 
         if (!activo) {
           return;

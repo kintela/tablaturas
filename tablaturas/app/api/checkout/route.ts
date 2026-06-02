@@ -7,6 +7,23 @@ type CheckoutBody = {
   items?: Array<{ id: string }>;
 };
 
+function obtenerOrigenApp(request: Request) {
+  const configurado =
+    process.env.APP_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  if (configurado) {
+    return configurado.replace(/\/+$/, "");
+  }
+
+  const origin = new URL(request.url).origin;
+
+  if (origin.includes("localhost")) {
+    return "http://127.0.0.1:3000";
+  }
+
+  return origin;
+}
+
 export async function POST(request: Request) {
   try {
     const { supabase, user } = await getUsuarioYPerfilActual();
@@ -116,7 +133,7 @@ export async function POST(request: Request) {
     }
 
     const stripe = getStripeServerClient();
-    const origin = new URL(request.url).origin;
+    const origin = obtenerOrigenApp(request);
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",

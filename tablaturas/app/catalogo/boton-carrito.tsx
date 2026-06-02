@@ -6,7 +6,7 @@ import {
   anadirAlCarrito,
   estaEnCarrito,
   quitarDelCarrito,
-  sincronizarCarritoConCatalogo,
+  sincronizarCarritoConServidor,
   type ItemCarrito,
 } from "@/app/catalogo/carrito-store";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -95,8 +95,16 @@ export function BotonCarrito({ item }: BotonCarritoProps) {
     setSincronizando(true);
 
     try {
-      await sincronizarCarritoConCatalogo(supabase);
-      const itemSigueEnCarrito = estaEnCarrito(item.id);
+      let itemSigueEnCarrito = estaEnCarrito(item.id);
+
+      try {
+        const itemsSincronizados = await sincronizarCarritoConServidor(supabase);
+        itemSigueEnCarrito = itemsSincronizados.some(
+          (itemEnCarrito) => itemEnCarrito.id === item.id
+        );
+      } catch (error) {
+        console.error("No se pudo sincronizar el carrito con el catálogo.", error);
+      }
 
       if (itemSigueEnCarrito) {
         quitarDelCarrito(item.id);
