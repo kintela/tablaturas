@@ -108,37 +108,6 @@ export async function sincronizarCarritoConCatalogo(supabase: SupabaseClient) {
   return siguiente;
 }
 
-export async function sincronizarCarritoConServidor(supabase: SupabaseClient) {
-  const actual = leerCarritoDesdeStorage();
-
-  if (actual.length === 0) {
-    return actual;
-  }
-
-  const [
-    { count: totalCompras, error: comprasError },
-    { count: totalPedidos, error: pedidosError },
-  ] = await Promise.all([
-    supabase.from("compras").select("id", { count: "exact", head: true }),
-    supabase.from("pedidos").select("id", { count: "exact", head: true }),
-  ]);
-
-  if (comprasError) {
-    throw comprasError;
-  }
-
-  if (pedidosError) {
-    throw pedidosError;
-  }
-
-  if ((totalCompras ?? 0) === 0 && (totalPedidos ?? 0) === 0) {
-    guardarCarrito([]);
-    return [];
-  }
-
-  return sincronizarCarritoConCatalogo(supabase);
-}
-
 export function escucharCarrito(callback: (items: ItemCarrito[]) => void) {
   function manejador(event: Event) {
     const customEvent = event as CustomEvent<ItemCarrito[]>;

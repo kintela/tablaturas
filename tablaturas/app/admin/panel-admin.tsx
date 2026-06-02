@@ -168,6 +168,7 @@ function DropzoneArchivo({
 
 export function PanelAdmin() {
   const [resultado, setResultado] = useState<ResultadoOperacion | null>(null);
+  const [resultadoCorreo, setResultadoCorreo] = useState<ResultadoOperacion | null>(null);
   const [catalogo, setCatalogo] = useState<EstadoCatalogo>(estadoInicialCatalogo);
   const [cargandoCatalogo, setCargandoCatalogo] = useState(true);
 
@@ -180,6 +181,7 @@ export function PanelAdmin() {
   const [archivoPdf, setArchivoPdf] = useState<File | null>(null);
   const [archivoPreview, setArchivoPreview] = useState<File | null>(null);
   const [publicada, setPublicada] = useState(true);
+  const [emailPrueba, setEmailPrueba] = useState("");
 
   const [isPending, startTransition] = useTransition();
 
@@ -374,6 +376,26 @@ export function PanelAdmin() {
     });
   }
 
+  function probarCorreo() {
+    startTransition(async () => {
+      setResultado(null);
+      setResultadoCorreo(null);
+
+      const response = await fetch("/api/admin/test-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: emailPrueba,
+        }),
+      });
+
+      const data = (await response.json()) as ResultadoOperacion;
+      setResultadoCorreo(data);
+    });
+  }
+
   return (
     <section className="w-full rounded-[2rem] border border-black/10 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
       <div className="flex flex-col gap-3">
@@ -495,6 +517,48 @@ export function PanelAdmin() {
       </div>
 
       <div className="mt-8 grid gap-6 xl:grid-cols-2">
+        <div className="rounded-[1.5rem] border border-black/10 bg-zinc-50 p-6 xl:col-span-2">
+          <h3 className="text-xl font-semibold text-zinc-950">Prueba de correo</h3>
+          <p className="mt-2 text-sm leading-7 text-zinc-600">
+            Envía un correo de prueba usando la configuración SMTP actual para validar
+            los valores de <code>.env.local</code> antes de hacer una compra real.
+          </p>
+
+          <div className="mt-5 flex flex-col gap-4 sm:flex-row">
+            <input
+              type="email"
+              value={emailPrueba}
+              onChange={(event) => setEmailPrueba(event.target.value)}
+              className="w-full rounded-full border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-950"
+              placeholder="Correo destinatario para la prueba"
+            />
+            <button
+              type="button"
+              onClick={probarCorreo}
+              disabled={isPending || !emailPrueba.trim()}
+              className="rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isPending ? "Enviando..." : "Probar email SMTP"}
+            </button>
+          </div>
+
+          {resultadoCorreo ? (
+            <div
+              className={`mt-4 rounded-[1.25rem] p-4 text-sm ${
+                resultadoCorreo.ok
+                  ? "bg-emerald-50 text-emerald-900"
+                  : "bg-rose-50 text-rose-900"
+              }`}
+            >
+              {resultadoCorreo.ok ? (
+                <p>{resultadoCorreo.mensaje ?? "Correo de prueba enviado."}</p>
+              ) : (
+                <p>{resultadoCorreo.error ?? "No se pudo enviar el correo de prueba."}</p>
+              )}
+            </div>
+          ) : null}
+        </div>
+
         <div className="rounded-[1.5rem] border border-black/10 bg-zinc-50 p-6">
           <h3 className="text-xl font-semibold text-zinc-950">Crear grupo</h3>
           <p className="mt-2 text-sm leading-7 text-zinc-600">

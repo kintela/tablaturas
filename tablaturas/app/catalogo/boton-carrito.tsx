@@ -6,7 +6,7 @@ import {
   anadirAlCarrito,
   estaEnCarrito,
   quitarDelCarrito,
-  sincronizarCarritoConServidor,
+  sincronizarCarritoConCatalogo,
   type ItemCarrito,
 } from "@/app/catalogo/carrito-store";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -98,7 +98,7 @@ export function BotonCarrito({ item }: BotonCarritoProps) {
       let itemSigueEnCarrito = estaEnCarrito(item.id);
 
       try {
-        const itemsSincronizados = await sincronizarCarritoConServidor(supabase);
+        const itemsSincronizados = await sincronizarCarritoConCatalogo(supabase);
         itemSigueEnCarrito = itemsSincronizados.some(
           (itemEnCarrito) => itemEnCarrito.id === item.id
         );

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { enviarCorreoPedidoConfirmado } from "@/lib/email/enviar-correo-pedido-confirmado";
 import { getStripeServerClient } from "@/lib/stripe/server";
 
 function obtenerValidadoPorAppBanco(charge: Stripe.Charge | null) {
@@ -15,6 +16,112 @@ function obtenerValidadoPorAppBanco(charge: Stripe.Charge | null) {
   }
 
   return "no";
+}
+
+async function cargarItemsCorreoPedido(pedidoId: string) {
+  const { data: compras, error: comprasError } = await supabaseAdmin
+    .from("compras")
+    .select("tablatura_id, importe_pagado_centimos, moneda")
+    .eq("pedido_id", pedidoId)
+    .eq("estado", "pagada");
+
+  if (comprasError) {
+    throw comprasError;
+  }
+
+  const comprasPagadas = compras ?? [];
+  const tablaturaIds = comprasPagadas.map((compra) => compra.tablatura_id);
+
+  if (tablaturaIds.length === 0) {
+    return [];
+  }
+
+  const [{ data: tablaturas, error: tablaturasError }, { data: archivos, error: archivosError }] =
+    await Promise.all([
+      supabaseAdmin
+        .from("tablaturas")
+        .select("id, grupo_id, titulo_cancion, grupos(nombre)")
+        .in("id", tablaturaIds),
+      supabaseAdmin
+        .from("archivos_tablatura")
+        .select("tablatura_id, bucket, ruta, tipo_archivo, es_principal, orden")
+        .in("tablatura_id", tablaturaIds)
+        .eq("tipo_archivo", "pdf"),
+    ]);
+
+  if (tablaturasError) {
+    throw tablaturasError;
+  }
+
+  if (archivosError) {
+    throw archivosError;
+  }
+
+  const archivosPorTablatura = new Map<
+    string,
+    Array<{
+      bucket: string;
+      ruta: string;
+      es_principal: boolean;
+      orden: number;
+    }>
+  >();
+
+  for (const archivo of archivos ?? []) {
+    const actuales = archivosPorTablatura.get(archivo.tablatura_id) ?? [];
+    actuales.push({
+      bucket: archivo.bucket,
+      ruta: archivo.ruta,
+      es_principal: archivo.es_principal,
+      orden: archivo.orden,
+    });
+    archivosPorTablatura.set(archivo.tablatura_id, actuales);
+  }
+
+  const tablaturasPorId = new Map(
+    (tablaturas ?? []).map((tablatura) => [tablatura.id, tablatura])
+  );
+
+  return Promise.all(
+    comprasPagadas.map(async (compra) => {
+      const tablatura = tablaturasPorId.get(compra.tablatura_id);
+      const archivosPdf = [...(archivosPorTablatura.get(compra.tablatura_id) ?? [])].sort(
+        (a, b) => {
+          if (a.es_principal === b.es_principal) {
+            return a.orden - b.orden;
+          }
+
+          return a.es_principal ? -1 : 1;
+        }
+      );
+      const pdfPrincipal = archivosPdf[0];
+
+      let downloadUrl: string | null = null;
+
+      if (pdfPrincipal) {
+        const { data } = await supabaseAdmin.storage
+          .from(pdfPrincipal.bucket)
+          .createSignedUrl(
+            pdfPrincipal.ruta,
+            Number(process.env.PEDIDO_DOWNLOAD_URL_TTL_SECONDS ?? 60 * 60 * 24 * 7)
+          );
+
+        downloadUrl = data?.signedUrl ?? null;
+      }
+
+      const grupo = Array.isArray(tablatura?.grupos)
+        ? tablatura.grupos[0]
+        : tablatura?.grupos;
+
+      return {
+        titulo: tablatura?.titulo_cancion ?? "Partitura",
+        grupoNombre: grupo?.nombre ?? "Grupo sin nombre",
+        precioCentimos: compra.importe_pagado_centimos,
+        moneda: compra.moneda,
+        downloadUrl,
+      };
+    })
+  );
 }
 
 export async function POST(request: Request) {
@@ -31,7 +138,10 @@ export async function POST(request: Request) {
 
     const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
 
-    if (event.type === "checkout.session.completed") {
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded"
+    ) {
       const session = event.data.object as Stripe.Checkout.Session;
       const pedidoId = session.metadata?.pedido_id;
 
@@ -63,7 +173,7 @@ export async function POST(request: Request) {
           validadoporappbanco = obtenerValidadoPorAppBanco(latestCharge);
         }
 
-        const { error: pedidoError } = await supabaseAdmin
+        const { data: pedidoActualizado, error: pedidoError } = await supabaseAdmin
           .from("pedidos")
           .update({
             estado: "pagado",
@@ -74,10 +184,17 @@ export async function POST(request: Request) {
             proveedor_pago: "stripe",
             validadoporappbanco,
           })
-          .eq("id", pedidoId);
+          .eq("id", pedidoId)
+          .eq("estado", "pendiente")
+          .select("id")
+          .maybeSingle();
 
         if (pedidoError) {
           throw pedidoError;
+        }
+
+        if (!pedidoActualizado) {
+          return NextResponse.json({ received: true });
         }
 
         const { error: comprasError } = await supabaseAdmin
@@ -86,10 +203,34 @@ export async function POST(request: Request) {
             estado: "pagada",
             fecha_pago: fechaPago,
           })
-          .eq("pedido_id", pedidoId);
+          .eq("pedido_id", pedidoId)
+          .eq("estado", "pendiente");
 
         if (comprasError) {
           throw comprasError;
+        }
+
+        const destinatario =
+          session.customer_details?.email || session.customer_email || null;
+
+        if (destinatario) {
+          try {
+            const itemsCorreo = await cargarItemsCorreoPedido(pedidoId);
+
+            if (itemsCorreo.length > 0) {
+              await enviarCorreoPedidoConfirmado({
+                pedidoId,
+                destinatario,
+                nombreCliente: session.customer_details?.name,
+                items: itemsCorreo,
+              });
+            }
+          } catch (error) {
+            console.error("No se pudo enviar el correo de confirmación del pedido.", {
+              pedidoId,
+              error,
+            });
+          }
         }
       }
     }
