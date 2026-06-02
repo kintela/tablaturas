@@ -83,10 +83,6 @@ function construirHtml({
         <ul style="margin:32px 0 0;padding:0;">
           ${lineas}
         </ul>
-
-        <p style="margin:24px 0 0;font-size:13px;line-height:1.7;color:#6b7280;">
-          Los enlaces de descarga son personales y caducan automáticamente.
-        </p>
       </div>
     </div>
   `;
@@ -125,8 +121,6 @@ function construirTexto({
     "Partituras compradas:",
     "",
     lineas,
-    "",
-    "Los enlaces de descarga son personales y caducan automáticamente.",
   ].join("\n");
 }
 
