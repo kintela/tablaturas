@@ -15,6 +15,17 @@ type Perfil = {
   apellidos: string | null;
 };
 
+type PedidoItem = {
+  pedidoId: string | null;
+  tablaturaId: string;
+  titulo: string;
+  grupoNombre: string;
+  precioPagadoCentimos: number;
+  moneda: string;
+  fechaPago: string | null;
+  downloadUrl: string | null;
+};
+
 function traducirErrorAuth(mensaje: string) {
   const normalizado = mensaje.trim().toLowerCase();
 
@@ -139,6 +150,10 @@ export function AuthPanel() {
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [cargandoAcceso, setCargandoAcceso] = useState(false);
   const [cerrandoSesion, setCerrandoSesion] = useState(false);
+  const [pedidosAbiertos, setPedidosAbiertos] = useState(false);
+  const [cargandoPedidos, setCargandoPedidos] = useState(false);
+  const [pedidos, setPedidos] = useState<PedidoItem[]>([]);
+  const [errorPedidos, setErrorPedidos] = useState<string | null>(null);
 
   function limpiarParametrosAuth() {
     const params = new URLSearchParams(searchParams.toString());
@@ -283,6 +298,32 @@ export function AuthPanel() {
     }
   }
 
+  async function abrirPedidos() {
+    setPedidosAbiertos(true);
+    setCargandoPedidos(true);
+    setErrorPedidos(null);
+
+    try {
+      const response = await fetch("/api/pedidos");
+      const data = (await response.json()) as
+        | { ok: true; items: PedidoItem[] }
+        | { ok: false; error?: string };
+
+      if (!response.ok || !data.ok) {
+        setErrorPedidos(data.ok ? "No se pudieron cargar los pedidos." : data.error ?? null);
+        setPedidos([]);
+        return;
+      }
+
+      setPedidos(data.items);
+    } catch {
+      setErrorPedidos("No se pudieron cargar los pedidos.");
+      setPedidos([]);
+    } finally {
+      setCargandoPedidos(false);
+    }
+  }
+
   const nombreCompleto = [perfil?.nombre?.trim(), perfil?.apellidos?.trim()]
     .filter(Boolean)
     .join(" ");
@@ -291,6 +332,24 @@ export function AuthPanel() {
   const emailVisible = perfil?.email || session?.user.email || null;
   const modalVisible =
     modalAbierto || (searchParams.get("auth") === "login" && !session);
+
+  function formatearPrecio(precioCentimos: number, moneda: string) {
+    return new Intl.NumberFormat("es-ES", {
+      style: "currency",
+      currency: moneda,
+    }).format(precioCentimos / 100);
+  }
+
+  function formatearFecha(valor: string | null) {
+    if (!valor) {
+      return "Fecha no disponible";
+    }
+
+    return new Intl.DateTimeFormat("es-ES", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(valor));
+  }
 
   return (
     <>
@@ -321,6 +380,15 @@ export function AuthPanel() {
                 <p className="mt-1 text-xs leading-5 text-zinc-500">{emailVisible}</p>
               ) : null}
               <div className="mt-2 flex flex-wrap justify-end gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void abrirPedidos();
+                  }}
+                  className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-zinc-700 transition hover:border-zinc-950"
+                >
+                  Mis pedidos
+                </button>
                 {perfil?.rol === "admin" ? (
                   <Link
                     href="/admin"
@@ -464,6 +532,100 @@ export function AuthPanel() {
                   {mensaje ? <p className="text-sm text-emerald-700">{mensaje}</p> : null}
                   {error ? <p className="text-sm text-rose-600">{error}</p> : null}
                 </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {typeof document !== "undefined" && pedidosAbiertos
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 px-4 py-6"
+              onClick={() => setPedidosAbiertos(false)}
+            >
+              <div
+                className="w-full max-w-4xl rounded-[2rem] border border-black/10 bg-white p-6 shadow-[0_30px_100px_rgba(15,23,42,0.22)]"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                      Mis pedidos
+                    </p>
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                      Partituras compradas
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPedidosAbiertos(false)}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 text-zinc-700 transition hover:border-zinc-950"
+                    aria-label="Cerrar"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {cargandoPedidos ? (
+                  <p className="mt-6 text-sm text-zinc-600">Cargando pedidos...</p>
+                ) : errorPedidos ? (
+                  <p className="mt-6 text-sm text-rose-600">{errorPedidos}</p>
+                ) : pedidos.length === 0 ? (
+                  <p className="mt-6 text-sm text-zinc-600">
+                    Aún no tienes compras registradas.
+                  </p>
+                ) : (
+                  <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-black/10 bg-white">
+                    <table className="w-full border-collapse text-left text-sm">
+                      <thead className="bg-zinc-50 text-zinc-600">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold">Grupo</th>
+                          <th className="px-4 py-3 font-semibold">Canción</th>
+                          <th className="px-4 py-3 font-semibold">Fecha</th>
+                          <th className="px-4 py-3 font-semibold">Precio</th>
+                          <th className="px-4 py-3 font-semibold">Descarga</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pedidos.map((pedido) => (
+                          <tr
+                            key={`${pedido.pedidoId ?? "sin-pedido"}-${pedido.tablaturaId}`}
+                            className="border-t border-black/10 align-top"
+                          >
+                            <td className="px-4 py-4 text-zinc-700">{pedido.grupoNombre}</td>
+                            <td className="px-4 py-4 font-semibold text-zinc-950">
+                              {pedido.titulo}
+                            </td>
+                            <td className="px-4 py-4 text-zinc-700">
+                              {formatearFecha(pedido.fechaPago)}
+                            </td>
+                            <td className="px-4 py-4 text-zinc-700">
+                              {formatearPrecio(
+                                pedido.precioPagadoCentimos,
+                                pedido.moneda
+                              )}
+                            </td>
+                            <td className="px-4 py-4">
+                              {pedido.downloadUrl ? (
+                                <a
+                                  href={pedido.downloadUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:border-zinc-950"
+                                >
+                                  Descargar PDF
+                                </a>
+                              ) : (
+                                <span className="text-zinc-400">No disponible</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>,
             document.body
