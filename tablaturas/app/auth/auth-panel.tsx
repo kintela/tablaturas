@@ -16,6 +16,10 @@ type Perfil = {
   apellidos: string | null;
 };
 
+type AuthPanelProps = {
+  theme?: "light" | "dark";
+};
+
 type PedidoItem = {
   pedidoId: string | null;
   tablaturaId: string;
@@ -140,7 +144,25 @@ function IconoOcultar() {
   );
 }
 
-export function AuthPanel() {
+function crearNombreDesdeEmail(email: string | null | undefined) {
+  if (!email) {
+    return null;
+  }
+
+  const local = email.split("@")[0]?.trim();
+
+  if (!local) {
+    return null;
+  }
+
+  return local
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((fragmento) => fragmento.charAt(0).toUpperCase() + fragmento.slice(1))
+    .join(" ");
+}
+
+export function AuthPanel({ theme = "light" }: AuthPanelProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -333,9 +355,14 @@ export function AuthPanel() {
   const nombreCompleto = [perfil?.nombre?.trim(), perfil?.apellidos?.trim()]
     .filter(Boolean)
     .join(" ");
+  const nombreDerivadoEmail = crearNombreDesdeEmail(
+    perfil?.email || session?.user.email || null
+  );
   const nombreVisible =
-    nombreCompleto || perfil?.nombre?.trim() || perfil?.email || session?.user.email || "Iniciar sesión";
+    nombreCompleto || perfil?.nombre?.trim() || nombreDerivadoEmail || "Mi cuenta";
   const emailVisible = perfil?.email || session?.user.email || null;
+  const textoPrincipal = theme === "dark" ? "text-white" : "text-zinc-950";
+  const textoSecundario = theme === "dark" ? "text-zinc-300" : "text-zinc-500";
   const modalVisible =
     modalAbierto || (searchParams.get("auth") === "login" && !session);
 
@@ -381,9 +408,13 @@ export function AuthPanel() {
         <div className="max-w-[220px] text-right">
           {session ? (
             <>
-              <p className="text-sm font-semibold leading-5 text-zinc-950">{nombreVisible}</p>
+              <p className={`text-sm font-semibold leading-5 ${textoPrincipal}`}>
+                {nombreVisible}
+              </p>
               {emailVisible ? (
-                <p className="mt-1 text-xs leading-5 text-zinc-500">{emailVisible}</p>
+                <p className={`mt-1 text-xs leading-5 ${textoSecundario}`}>
+                  {emailVisible}
+                </p>
               ) : null}
               <div className="mt-2 flex flex-wrap justify-end gap-2 text-xs">
                 <button

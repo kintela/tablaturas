@@ -71,7 +71,7 @@ export default async function LandingPage() {
               </div>
 
               <div className="flex flex-col items-end gap-6 lg:min-w-[360px] lg:max-w-[360px]">
-                <AuthPanel />
+                <AuthPanel theme="dark" />
                 {logoUrl ? (
                   <div className="hidden w-full lg:block">
                     <div className="rounded-[2.25rem] border border-white/12 bg-white/8 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.22)] backdrop-blur">
