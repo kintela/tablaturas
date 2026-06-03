@@ -104,7 +104,10 @@ type DropzoneArchivoProps = {
   descripcion?: string;
   accept: string;
   archivo: File | null;
+  error?: string | null;
+  validarArchivo: (archivo: File) => string | null;
   onSeleccionar: (archivo: File | null) => void;
+  onError: (mensaje: string | null) => void;
 };
 
 function DropzoneArchivo({
@@ -112,17 +115,40 @@ function DropzoneArchivo({
   descripcion,
   accept,
   archivo,
+  error,
+  validarArchivo,
   onSeleccionar,
+  onError,
 }: DropzoneArchivoProps) {
   const [arrastrando, setArrastrando] = useState(false);
   const inputId = useId();
+  const errorId = `${inputId}-error`;
+
+  function procesarArchivo(fichero: File | null) {
+    if (!fichero) {
+      onSeleccionar(null);
+      onError(null);
+      return;
+    }
+
+    const mensajeError = validarArchivo(fichero);
+
+    if (mensajeError) {
+      onSeleccionar(null);
+      onError(mensajeError);
+      return;
+    }
+
+    onSeleccionar(fichero);
+    onError(null);
+  }
 
   function manejarDrop(event: DragEvent<HTMLLabelElement>) {
     event.preventDefault();
     setArrastrando(false);
 
     const fichero = event.dataTransfer.files?.[0] ?? null;
-    onSeleccionar(fichero);
+    procesarArchivo(fichero);
   }
 
   return (
@@ -147,10 +173,30 @@ function DropzoneArchivo({
       className={`flex cursor-pointer flex-col gap-2 rounded-[1.5rem] border border-dashed bg-white px-4 py-4 text-sm text-zinc-700 transition ${
         arrastrando
           ? "border-zinc-950 bg-zinc-50"
-          : "border-black/15 hover:border-zinc-500"
+          : error
+            ? "border-rose-300 bg-rose-50/40"
+            : "border-black/15 hover:border-zinc-500"
       }`}
+      aria-describedby={error ? errorId : undefined}
     >
-      <span className="font-medium text-zinc-950">{titulo}</span>
+      <span className="flex items-start justify-between gap-3">
+        <span className="font-medium text-zinc-950">{titulo}</span>
+        {archivo ? (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              procesarArchivo(null);
+            }}
+            className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-black/10 bg-white text-base leading-none text-zinc-500 transition hover:border-zinc-950 hover:text-zinc-950"
+            aria-label={`Quitar archivo de ${titulo}`}
+            title="Quitar archivo"
+          >
+            ×
+          </button>
+        ) : null}
+      </span>
       <span className="text-xs text-zinc-500">
         {archivo
           ? `Archivo seleccionado: ${archivo.name}`
@@ -161,11 +207,38 @@ function DropzoneArchivo({
         id={inputId}
         type="file"
         accept={accept}
-        onChange={(event) => onSeleccionar(event.target.files?.[0] ?? null)}
+        onChange={(event) => {
+          procesarArchivo(event.target.files?.[0] ?? null);
+          event.currentTarget.value = "";
+        }}
         className="hidden"
       />
+      {error ? (
+        <span id={errorId} className="text-xs text-rose-600">
+          {error}
+        </span>
+      ) : null}
     </label>
   );
+}
+
+function esPdfValido(archivo: File) {
+  return (
+    archivo.type === "application/pdf" ||
+    archivo.name.toLowerCase().endsWith(".pdf")
+  );
+}
+
+function esMidiValido(archivo: File) {
+  return archivo.name.toLowerCase().endsWith(".midi");
+}
+
+function esWavValido(archivo: File) {
+  return archivo.name.toLowerCase().endsWith(".wav");
+}
+
+function esImagenValida(archivo: File) {
+  return archivo.type.toLowerCase().startsWith("image/");
 }
 
 export function PanelAdmin() {
@@ -181,6 +254,12 @@ export function PanelAdmin() {
   const [precioVenta, setPrecioVenta] = useState("4,99");
   const [archivoPdf, setArchivoPdf] = useState<File | null>(null);
   const [archivoPreview, setArchivoPreview] = useState<File | null>(null);
+  const [archivoMidi, setArchivoMidi] = useState<File | null>(null);
+  const [archivoWav, setArchivoWav] = useState<File | null>(null);
+  const [errorArchivoPdf, setErrorArchivoPdf] = useState<string | null>(null);
+  const [errorArchivoPreview, setErrorArchivoPreview] = useState<string | null>(null);
+  const [errorArchivoMidi, setErrorArchivoMidi] = useState<string | null>(null);
+  const [errorArchivoWav, setErrorArchivoWav] = useState<string | null>(null);
   const [publicada, setPublicada] = useState(true);
 
   const [isPending, startTransition] = useTransition();
@@ -258,6 +337,12 @@ export function PanelAdmin() {
     setPrecioVenta("4,99");
     setArchivoPdf(null);
     setArchivoPreview(null);
+    setArchivoMidi(null);
+    setArchivoWav(null);
+    setErrorArchivoPdf(null);
+    setErrorArchivoPreview(null);
+    setErrorArchivoMidi(null);
+    setErrorArchivoWav(null);
     setPublicada(true);
   }
 
@@ -322,6 +407,14 @@ export function PanelAdmin() {
         formData.set("preview", archivoPreview);
       }
 
+      if (archivoMidi) {
+        formData.set("midi", archivoMidi);
+      }
+
+      if (archivoWav) {
+        formData.set("audioWav", archivoWav);
+      }
+
       const response = await fetch("/api/admin/catalogo", {
         method: "POST",
         body: formData,
@@ -348,6 +441,12 @@ export function PanelAdmin() {
     setPublicada(tablatura.publicada);
     setArchivoPdf(null);
     setArchivoPreview(null);
+    setArchivoMidi(null);
+    setArchivoWav(null);
+    setErrorArchivoPdf(null);
+    setErrorArchivoPreview(null);
+    setErrorArchivoMidi(null);
+    setErrorArchivoWav(null);
     setResultado(null);
   }
 
@@ -541,8 +640,8 @@ export function PanelAdmin() {
               </h3>
               <p className="mt-2 text-sm leading-7 text-zinc-600">
                 {tablaturaEditandoId
-                  ? "Modifica los datos y, si quieres, sustituye también el PDF o la imagen preview."
-                  : "Selecciona el grupo, indica los datos de la canción y sube el PDF junto con una imagen preview."}
+                  ? "Modifica los datos y, si quieres, sustituye el PDF, la preview, el MIDI o el WAV."
+                  : "Selecciona el grupo, indica los datos de la canción y sube el PDF. También puedes añadir preview, MIDI y WAV."}
               </p>
             </div>
             {tablaturaEditandoId ? (
@@ -616,7 +715,12 @@ export function PanelAdmin() {
               }
               accept="application/pdf,.pdf"
               archivo={archivoPdf}
+              error={errorArchivoPdf}
+              validarArchivo={(archivo) =>
+                esPdfValido(archivo) ? null : "Solo se admite un archivo .pdf."
+              }
               onSeleccionar={setArchivoPdf}
+              onError={setErrorArchivoPdf}
             />
 
             <DropzoneArchivo
@@ -632,7 +736,56 @@ export function PanelAdmin() {
               }
               accept="image/*"
               archivo={archivoPreview}
+              error={errorArchivoPreview}
+              validarArchivo={(archivo) =>
+                esImagenValida(archivo)
+                  ? null
+                  : "Solo se admiten archivos de imagen como jpg, png, webp o svg."
+              }
               onSeleccionar={setArchivoPreview}
+              onError={setErrorArchivoPreview}
+            />
+
+            <DropzoneArchivo
+              titulo={
+                tablaturaEditandoId
+                  ? "Archivo MIDI para sustituir el actual"
+                  : "Archivo MIDI"
+              }
+              descripcion={
+                tablaturaEditandoId
+                  ? "Déjalo vacío si quieres conservar el MIDI actual."
+                  : "Se guardará con el nombre fijo midi.mid."
+              }
+              accept=".midi"
+              archivo={archivoMidi}
+              error={errorArchivoMidi}
+              validarArchivo={(archivo) =>
+                esMidiValido(archivo) ? null : "Solo se admite un archivo .midi."
+              }
+              onSeleccionar={setArchivoMidi}
+              onError={setErrorArchivoMidi}
+            />
+
+            <DropzoneArchivo
+              titulo={
+                tablaturaEditandoId
+                  ? "Archivo WAV para sustituir el actual"
+                  : "Archivo WAV"
+              }
+              descripcion={
+                tablaturaEditandoId
+                  ? "Déjalo vacío si quieres conservar el WAV actual."
+                  : "Se guardará con el nombre fijo audio.wav."
+              }
+              accept=".wav,audio/wav,audio/wave,audio/x-wav"
+              archivo={archivoWav}
+              error={errorArchivoWav}
+              validarArchivo={(archivo) =>
+                esWavValido(archivo) ? null : "Solo se admite un archivo .wav."
+              }
+              onSeleccionar={setArchivoWav}
+              onError={setErrorArchivoWav}
             />
 
             <button
@@ -642,6 +795,10 @@ export function PanelAdmin() {
                 isPending ||
                 !grupoSeleccionado ||
                 !tituloCancion.trim() ||
+                !!errorArchivoPdf ||
+                !!errorArchivoPreview ||
+                !!errorArchivoMidi ||
+                !!errorArchivoWav ||
                 (!tablaturaEditandoId && !archivoPdf)
               }
               className="rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -652,7 +809,7 @@ export function PanelAdmin() {
                   : "Subiendo..."
                 : tablaturaEditandoId
                   ? "Guardar cambios"
-                  : "Crear tablatura y subir PDF"}
+                  : "Crear tablatura y subir archivos"}
             </button>
           </div>
         </div>

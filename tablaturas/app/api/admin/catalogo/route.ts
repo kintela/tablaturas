@@ -1,7 +1,59 @@
 import { NextResponse } from "next/server";
 
+import {
+  construirRutaArchivoTablatura,
+  type TipoArchivoTablatura,
+} from "@/lib/archivos-tablatura";
 import { esAdminActual } from "@/lib/supabase/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+
+function extraerMensajeError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const candidato = error as {
+      message?: unknown;
+      details?: unknown;
+      hint?: unknown;
+      code?: unknown;
+    };
+
+    const partes = [
+      typeof candidato.message === "string" ? candidato.message : null,
+      typeof candidato.details === "string" ? candidato.details : null,
+      typeof candidato.hint === "string" ? candidato.hint : null,
+      typeof candidato.code === "string" ? `code=${candidato.code}` : null,
+    ].filter(Boolean);
+
+    if (partes.length > 0) {
+      return partes.join(" | ");
+    }
+  }
+
+  return "No se pudo guardar la información.";
+}
+
+function obtenerStatusError(error: unknown) {
+  if (typeof error === "object" && error !== null) {
+    const candidato = error as { status?: unknown; statusCode?: unknown };
+
+    if (typeof candidato.status === "number") {
+      return candidato.status;
+    }
+
+    if (typeof candidato.statusCode === "string") {
+      const status = Number(candidato.statusCode);
+
+      if (Number.isFinite(status)) {
+        return status;
+      }
+    }
+  }
+
+  return 500;
+}
 
 function crearSlugBase(valor: string) {
   return valor
@@ -92,10 +144,82 @@ function obtenerExtensionArchivo(nombre: string) {
   return partes.length > 1 ? partes.pop() ?? "" : "";
 }
 
+function esPdfValido(archivo: File) {
+  return (
+    archivo.type === "application/pdf" ||
+    archivo.name.toLowerCase().endsWith(".pdf")
+  );
+}
+
+function esMidiValido(archivo: File) {
+  const mimeType = archivo.type.toLowerCase();
+  return (
+    mimeType === "" ||
+    mimeType === "audio/midi" ||
+    mimeType === "audio/mid" ||
+    mimeType === "audio/x-midi" ||
+    mimeType === "application/x-midi" ||
+    mimeType === "application/octet-stream" ||
+    archivo.name.toLowerCase().endsWith(".mid") ||
+    archivo.name.toLowerCase().endsWith(".midi")
+  );
+}
+
+function esWavValido(archivo: File) {
+  const mimeType = archivo.type.toLowerCase();
+  return (
+    mimeType === "" ||
+    mimeType === "audio/wav" ||
+    mimeType === "audio/wave" ||
+    mimeType === "audio/x-wav" ||
+    mimeType === "application/octet-stream" ||
+    archivo.name.toLowerCase().endsWith(".wav")
+  );
+}
+
+function obtenerContentTypePreview(archivo: File) {
+  const extensionPreview = obtenerExtensionArchivo(archivo.name) || "png";
+  return archivo.type || `image/${extensionPreview}`;
+}
+
+function obtenerContentTypeArchivo(
+  tipoArchivo: Extract<TipoArchivoTablatura, "pdf" | "imagen_previa" | "midi" | "wav">,
+  archivo: File
+) {
+  switch (tipoArchivo) {
+    case "pdf":
+      return "application/pdf";
+    case "imagen_previa":
+      return obtenerContentTypePreview(archivo);
+    case "midi":
+      return "audio/midi";
+    case "wav":
+      return "audio/wav";
+  }
+}
+
+function validarArchivoSubido(
+  tipoArchivo: Extract<TipoArchivoTablatura, "pdf" | "midi" | "wav">,
+  archivo: File
+) {
+  if (tipoArchivo === "pdf" && !esPdfValido(archivo)) {
+    return "El archivo debe ser un PDF.";
+  }
+
+  if (tipoArchivo === "midi" && !esMidiValido(archivo)) {
+    return "El archivo MIDI debe tener extensión .mid o .midi.";
+  }
+
+  if (tipoArchivo === "wav" && !esWavValido(archivo)) {
+    return "El archivo de audio debe ser un WAV.";
+  }
+
+  return null;
+}
+
 async function reemplazarArchivoTablatura(params: {
   tablaturaId: string;
-  grupoId: string;
-  tipoArchivo: "pdf" | "imagen_previa";
+  tipoArchivo: Extract<TipoArchivoTablatura, "pdf" | "imagen_previa" | "midi" | "wav">;
   archivo: File;
   rutaDestino: string;
   contentType: string;
@@ -304,6 +428,8 @@ export async function POST(request: Request) {
       const publicada = String(formData.get("publicada") ?? "true") === "true";
       const archivo = formData.get("archivo");
       const preview = formData.get("preview");
+      const midi = formData.get("midi");
+      const audioWav = formData.get("audioWav");
 
       if (!grupoId) {
         return NextResponse.json(
@@ -333,14 +459,29 @@ export async function POST(request: Request) {
         );
       }
 
-      if (
-        archivo.type !== "application/pdf" &&
-        !archivo.name.toLowerCase().endsWith(".pdf")
-      ) {
+      const errorPdf = validarArchivoSubido("pdf", archivo);
+
+      if (errorPdf) {
         return NextResponse.json(
-          { ok: false, error: "El archivo debe ser un PDF." },
+          { ok: false, error: errorPdf },
           { status: 400 }
         );
+      }
+
+      if (midi instanceof File && midi.size > 0) {
+        const errorMidi = validarArchivoSubido("midi", midi);
+
+        if (errorMidi) {
+          return NextResponse.json({ ok: false, error: errorMidi }, { status: 400 });
+        }
+      }
+
+      if (audioWav instanceof File && audioWav.size > 0) {
+        const errorWav = validarArchivoSubido("wav", audioWav);
+
+        if (errorWav) {
+          return NextResponse.json({ ok: false, error: errorWav }, { status: 400 });
+        }
       }
 
       await asegurarBucketTablaturas();
@@ -365,32 +506,71 @@ export async function POST(request: Request) {
         throw tablaturaError;
       }
 
-      const rutaArchivo = `${grupoId}/${tablatura.id}/partitura.pdf`;
+      const rutaArchivo = construirRutaArchivoTablatura({
+        grupoId,
+        tablaturaId: tablatura.id,
+        tipoArchivo: "pdf",
+      });
 
       await reemplazarArchivoTablatura({
         tablaturaId: tablatura.id,
-        grupoId,
         tipoArchivo: "pdf",
         archivo,
         rutaDestino: rutaArchivo,
-        contentType: "application/pdf",
+        contentType: obtenerContentTypeArchivo("pdf", archivo),
         esPrincipal: true,
         orden: 0,
       });
 
       if (preview instanceof File && preview.size > 0) {
         const extensionPreview = obtenerExtensionArchivo(preview.name) || "png";
-        const rutaPreview = `${grupoId}/${tablatura.id}/preview.${extensionPreview}`;
+        const rutaPreview = construirRutaArchivoTablatura({
+          grupoId,
+          tablaturaId: tablatura.id,
+          tipoArchivo: "imagen_previa",
+          extensionPreview,
+        });
 
         await reemplazarArchivoTablatura({
           tablaturaId: tablatura.id,
-          grupoId,
           tipoArchivo: "imagen_previa",
           archivo: preview,
           rutaDestino: rutaPreview,
-          contentType: preview.type || `image/${extensionPreview}`,
+          contentType: obtenerContentTypeArchivo("imagen_previa", preview),
           esPrincipal: false,
           orden: 1,
+        });
+      }
+
+      if (midi instanceof File && midi.size > 0) {
+        await reemplazarArchivoTablatura({
+          tablaturaId: tablatura.id,
+          tipoArchivo: "midi",
+          archivo: midi,
+          rutaDestino: construirRutaArchivoTablatura({
+            grupoId,
+            tablaturaId: tablatura.id,
+            tipoArchivo: "midi",
+          }),
+          contentType: obtenerContentTypeArchivo("midi", midi),
+          esPrincipal: false,
+          orden: 2,
+        });
+      }
+
+      if (audioWav instanceof File && audioWav.size > 0) {
+        await reemplazarArchivoTablatura({
+          tablaturaId: tablatura.id,
+          tipoArchivo: "wav",
+          archivo: audioWav,
+          rutaDestino: construirRutaArchivoTablatura({
+            grupoId,
+            tablaturaId: tablatura.id,
+            tipoArchivo: "wav",
+          }),
+          contentType: obtenerContentTypeArchivo("wav", audioWav),
+          esPrincipal: false,
+          orden: 3,
         });
       }
 
@@ -411,6 +591,8 @@ export async function POST(request: Request) {
       const publicada = String(formData.get("publicada") ?? "true") === "true";
       const archivo = formData.get("archivo");
       const preview = formData.get("preview");
+      const midi = formData.get("midi");
+      const audioWav = formData.get("audioWav");
 
       if (!tablaturaId) {
         return NextResponse.json(
@@ -476,23 +658,25 @@ export async function POST(request: Request) {
       await asegurarBucketTablaturas();
 
       if (archivo instanceof File && archivo.size > 0) {
-        if (
-          archivo.type !== "application/pdf" &&
-          !archivo.name.toLowerCase().endsWith(".pdf")
-        ) {
+        const errorPdf = validarArchivoSubido("pdf", archivo);
+
+        if (errorPdf) {
           return NextResponse.json(
-            { ok: false, error: "El archivo de la partitura debe ser un PDF." },
+            { ok: false, error: errorPdf },
             { status: 400 }
           );
         }
 
         await reemplazarArchivoTablatura({
           tablaturaId,
-          grupoId,
           tipoArchivo: "pdf",
           archivo,
-          rutaDestino: `${grupoId}/${tablaturaId}/partitura.pdf`,
-          contentType: "application/pdf",
+          rutaDestino: construirRutaArchivoTablatura({
+            grupoId,
+            tablaturaId,
+            tipoArchivo: "pdf",
+          }),
+          contentType: obtenerContentTypeArchivo("pdf", archivo),
           esPrincipal: true,
           orden: 0,
         });
@@ -503,13 +687,61 @@ export async function POST(request: Request) {
 
         await reemplazarArchivoTablatura({
           tablaturaId,
-          grupoId,
           tipoArchivo: "imagen_previa",
           archivo: preview,
-          rutaDestino: `${grupoId}/${tablaturaId}/preview.${extensionPreview}`,
-          contentType: preview.type || `image/${extensionPreview}`,
+          rutaDestino: construirRutaArchivoTablatura({
+            grupoId,
+            tablaturaId,
+            tipoArchivo: "imagen_previa",
+            extensionPreview,
+          }),
+          contentType: obtenerContentTypeArchivo("imagen_previa", preview),
           esPrincipal: false,
           orden: 1,
+        });
+      }
+
+      if (midi instanceof File && midi.size > 0) {
+        const errorMidi = validarArchivoSubido("midi", midi);
+
+        if (errorMidi) {
+          return NextResponse.json({ ok: false, error: errorMidi }, { status: 400 });
+        }
+
+        await reemplazarArchivoTablatura({
+          tablaturaId,
+          tipoArchivo: "midi",
+          archivo: midi,
+          rutaDestino: construirRutaArchivoTablatura({
+            grupoId,
+            tablaturaId,
+            tipoArchivo: "midi",
+          }),
+          contentType: obtenerContentTypeArchivo("midi", midi),
+          esPrincipal: false,
+          orden: 2,
+        });
+      }
+
+      if (audioWav instanceof File && audioWav.size > 0) {
+        const errorWav = validarArchivoSubido("wav", audioWav);
+
+        if (errorWav) {
+          return NextResponse.json({ ok: false, error: errorWav }, { status: 400 });
+        }
+
+        await reemplazarArchivoTablatura({
+          tablaturaId,
+          tipoArchivo: "wav",
+          archivo: audioWav,
+          rutaDestino: construirRutaArchivoTablatura({
+            grupoId,
+            tablaturaId,
+            tipoArchivo: "wav",
+          }),
+          contentType: obtenerContentTypeArchivo("wav", audioWav),
+          esPrincipal: false,
+          orden: 3,
         });
       }
 
@@ -580,9 +812,14 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   } catch (error) {
+    console.error("Error en /api/admin/catalogo", error);
+    const status = obtenerStatusError(error);
+    const mensajeBase = extraerMensajeError(error);
     const mensaje =
-      error instanceof Error ? error.message : "No se pudo guardar la información.";
+      status === 413
+        ? "El archivo supera el tamano maximo permitido por Supabase Storage para este proyecto o bucket."
+        : mensajeBase;
 
-    return NextResponse.json({ ok: false, error: mensaje }, { status: 500 });
+    return NextResponse.json({ ok: false, error: mensaje }, { status });
   }
 }

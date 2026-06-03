@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import type { Session } from "@supabase/supabase-js";
 
+import type { TipoArchivoDescargable } from "@/lib/archivos-tablatura";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type Perfil = {
@@ -23,6 +24,11 @@ type PedidoItem = {
   precioPagadoCentimos: number;
   moneda: string;
   fechaPago: string | null;
+  archivosDescarga: Array<{
+    tipo: TipoArchivoDescargable;
+    etiqueta: string;
+    url: string | null;
+  }>;
   downloadUrl: string | null;
 };
 
@@ -607,15 +613,22 @@ export function AuthPanel() {
                               )}
                             </td>
                             <td className="px-4 py-4">
-                              {pedido.downloadUrl ? (
-                                <a
-                                  href={pedido.downloadUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:border-zinc-950"
-                                >
-                                  Descargar PDF
-                                </a>
+                              {pedido.archivosDescarga.some((archivo) => archivo.url) ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {pedido.archivosDescarga.map((archivo) =>
+                                    archivo.url ? (
+                                      <a
+                                        key={`${pedido.tablaturaId}-${archivo.tipo}`}
+                                        href={archivo.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:border-zinc-950"
+                                      >
+                                        {archivo.etiqueta}
+                                      </a>
+                                    ) : null
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-zinc-400">No disponible</span>
                               )}

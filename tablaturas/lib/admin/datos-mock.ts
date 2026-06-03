@@ -156,6 +156,17 @@ startxref
   <circle cx="1010" cy="190" r="88" fill="#18181b"/>
   <path d="M980 190h60M1010 160v60" stroke="#facc15" stroke-width="16" stroke-linecap="round"/>
 </svg>`;
+  const contenidoMidi = Buffer.from([
+    0x4d, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x01,
+    0x00, 0x60, 0x4d, 0x54, 0x72, 0x6b, 0x00, 0x00, 0x00, 0x04, 0x00, 0xff,
+    0x2f, 0x00,
+  ]);
+  const contenidoWav = Buffer.from([
+    0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45,
+    0x66, 0x6d, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
+    0x40, 0x1f, 0x00, 0x00, 0x40, 0x1f, 0x00, 0x00, 0x01, 0x00, 0x08, 0x00,
+    0x64, 0x61, 0x74, 0x61, 0x00, 0x00, 0x00, 0x00,
+  ]);
 
   return [
     {
@@ -185,6 +196,34 @@ startxref
       },
       contenido: Buffer.from(contenidoSvg, "utf-8"),
       contentType: "image/svg+xml",
+    },
+    {
+      registro: {
+        tipo_archivo: "midi" as const,
+        bucket: "tablaturas",
+        ruta: `${carpetaBase}/midi.mid`,
+        nombre_original: `${tituloCancion}.mid`,
+        tamano_bytes: contenidoMidi.byteLength,
+        mime_type: "audio/midi",
+        es_principal: false,
+        orden: 2,
+      },
+      contenido: contenidoMidi,
+      contentType: "audio/midi",
+    },
+    {
+      registro: {
+        tipo_archivo: "wav" as const,
+        bucket: "tablaturas",
+        ruta: `${carpetaBase}/audio.wav`,
+        nombre_original: `${tituloCancion}.wav`,
+        tamano_bytes: contenidoWav.byteLength,
+        mime_type: "audio/wav",
+        es_principal: false,
+        orden: 3,
+      },
+      contenido: contenidoWav,
+      contentType: "audio/wav",
     },
   ];
 }

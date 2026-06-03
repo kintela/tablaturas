@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
+import {
+  obtenerEtiquetaArchivo,
+  TIPOS_ARCHIVO_DESCARGABLES,
+  type TipoArchivoDescargable,
+} from "@/lib/archivos-tablatura";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { enviarCorreoPedidoConfirmado } from "@/lib/email/enviar-correo-pedido-confirmado";
 import { getStripeServerClient } from "@/lib/stripe/server";
@@ -38,16 +43,16 @@ async function cargarItemsCorreoPedido(pedidoId: string) {
 
   const [{ data: tablaturas, error: tablaturasError }, { data: archivos, error: archivosError }] =
     await Promise.all([
-      supabaseAdmin
-        .from("tablaturas")
-        .select("id, grupo_id, titulo_cancion, grupos(nombre)")
-        .in("id", tablaturaIds),
-      supabaseAdmin
-        .from("archivos_tablatura")
-        .select("tablatura_id, bucket, ruta, tipo_archivo, es_principal, orden")
-        .in("tablatura_id", tablaturaIds)
-        .eq("tipo_archivo", "pdf"),
-    ]);
+        supabaseAdmin
+          .from("tablaturas")
+          .select("id, grupo_id, titulo_cancion, grupos(nombre)")
+          .in("id", tablaturaIds),
+        supabaseAdmin
+          .from("archivos_tablatura")
+          .select("tablatura_id, bucket, ruta, tipo_archivo, es_principal, orden")
+          .in("tablatura_id", tablaturaIds)
+          .in("tipo_archivo", [...TIPOS_ARCHIVO_DESCARGABLES]),
+      ]);
 
   if (tablaturasError) {
     throw tablaturasError;
@@ -62,6 +67,7 @@ async function cargarItemsCorreoPedido(pedidoId: string) {
     Array<{
       bucket: string;
       ruta: string;
+      tipo_archivo: TipoArchivoDescargable;
       es_principal: boolean;
       orden: number;
     }>
@@ -72,6 +78,7 @@ async function cargarItemsCorreoPedido(pedidoId: string) {
     actuales.push({
       bucket: archivo.bucket,
       ruta: archivo.ruta,
+      tipo_archivo: archivo.tipo_archivo as TipoArchivoDescargable,
       es_principal: archivo.es_principal,
       orden: archivo.orden,
     });
@@ -85,7 +92,7 @@ async function cargarItemsCorreoPedido(pedidoId: string) {
   return Promise.all(
     comprasPagadas.map(async (compra) => {
       const tablatura = tablaturasPorId.get(compra.tablatura_id);
-      const archivosPdf = [...(archivosPorTablatura.get(compra.tablatura_id) ?? [])].sort(
+      const archivosDescargables = [...(archivosPorTablatura.get(compra.tablatura_id) ?? [])].sort(
         (a, b) => {
           if (a.es_principal === b.es_principal) {
             return a.orden - b.orden;
@@ -94,20 +101,22 @@ async function cargarItemsCorreoPedido(pedidoId: string) {
           return a.es_principal ? -1 : 1;
         }
       );
-      const pdfPrincipal = archivosPdf[0];
+      const archivosDescarga = await Promise.all(
+        archivosDescargables.map(async (archivo) => {
+          const { data } = await supabaseAdmin.storage
+            .from(archivo.bucket)
+            .createSignedUrl(
+              archivo.ruta,
+              Number(process.env.PEDIDO_DOWNLOAD_URL_TTL_SECONDS ?? 60 * 60 * 24 * 7)
+            );
 
-      let downloadUrl: string | null = null;
-
-      if (pdfPrincipal) {
-        const { data } = await supabaseAdmin.storage
-          .from(pdfPrincipal.bucket)
-          .createSignedUrl(
-            pdfPrincipal.ruta,
-            Number(process.env.PEDIDO_DOWNLOAD_URL_TTL_SECONDS ?? 60 * 60 * 24 * 7)
-          );
-
-        downloadUrl = data?.signedUrl ?? null;
-      }
+          return {
+            tipo: archivo.tipo_archivo,
+            etiqueta: obtenerEtiquetaArchivo(archivo.tipo_archivo),
+            url: data?.signedUrl ?? null,
+          };
+        })
+      );
 
       const grupo = Array.isArray(tablatura?.grupos)
         ? tablatura.grupos[0]
@@ -118,7 +127,7 @@ async function cargarItemsCorreoPedido(pedidoId: string) {
         grupoNombre: grupo?.nombre ?? "Grupo sin nombre",
         precioCentimos: compra.importe_pagado_centimos,
         moneda: compra.moneda,
-        downloadUrl,
+        archivosDescarga,
       };
     })
   );

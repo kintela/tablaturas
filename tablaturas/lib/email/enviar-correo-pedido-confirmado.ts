@@ -1,11 +1,19 @@
 import nodemailer from "nodemailer";
 
+import type { TipoArchivoDescargable } from "@/lib/archivos-tablatura";
+
+type ArchivoDescargaCorreo = {
+  tipo: TipoArchivoDescargable;
+  etiqueta: string;
+  url: string | null;
+};
+
 type ItemCorreoPedido = {
   titulo: string;
   grupoNombre: string;
   precioCentimos: number;
   moneda: string;
-  downloadUrl: string | null;
+  archivosDescarga: ArchivoDescargaCorreo[];
 };
 
 type EnviarCorreoPedidoConfirmadoParams = {
@@ -42,9 +50,17 @@ function construirHtml({
 
   const lineas = items
     .map((item) => {
-      const descarga = item.downloadUrl
-        ? `<p style="margin:12px 0 0;"><a href="${item.downloadUrl}" style="color:#111827;font-weight:600;">Descargar PDF</a></p>`
-        : `<p style="margin:12px 0 0;color:#6b7280;">El enlace de descarga no se ha podido generar automáticamente. Responde a este correo si lo necesitas.</p>`;
+      const enlacesDescarga = item.archivosDescarga
+        .filter((archivo) => archivo.url)
+        .map(
+          (archivo) =>
+            `<a href="${archivo.url}" style="display:inline-block;margin:12px 12px 0 0;color:#111827;font-weight:600;">Descargar ${archivo.etiqueta}</a>`
+        )
+        .join("");
+
+      const descarga = enlacesDescarga
+        ? `<p style="margin:12px 0 0;">${enlacesDescarga}</p>`
+        : `<p style="margin:12px 0 0;color:#6b7280;">No se ha podido generar ningún enlace de descarga automáticamente. Responde a este correo si lo necesitas.</p>`;
 
       return `
         <li style="margin:0 0 20px;padding:0 0 20px;border-bottom:1px solid #e5e7eb;list-style:none;">
@@ -66,7 +82,7 @@ function construirHtml({
         <h1 style="margin:16px 0 0;font-size:32px;line-height:1.1;">Tu compra está lista</h1>
         <p style="margin:24px 0 0;font-size:16px;line-height:1.7;">${saludo}</p>
         <p style="margin:16px 0 0;font-size:16px;line-height:1.7;">
-          Hemos confirmado tu pago. Debajo tienes el resumen de la compra y los enlaces para descargar tus partituras en PDF.
+          Hemos confirmado tu pago. Debajo tienes el resumen de la compra y los enlaces para descargar los archivos disponibles de cada tablatura.
         </p>
 
         <div style="margin:24px 0 0;padding:16px 20px;background:#f9fafb;border-radius:16px;">
@@ -99,9 +115,13 @@ function construirTexto({
 
   const lineas = items
     .map((item, indice) => {
-      const descarga = item.downloadUrl
-        ? `Descarga: ${item.downloadUrl}`
-        : "Descarga: no se ha podido generar el enlace automáticamente.";
+      const descargasDisponibles = item.archivosDescarga.filter((archivo) => archivo.url);
+      const descarga =
+        descargasDisponibles.length > 0
+          ? descargasDisponibles
+              .map((archivo) => `Descargar ${archivo.etiqueta}: ${archivo.url}`)
+              .join("\n")
+          : "Descarga: no se ha podido generar ningún enlace automáticamente.";
 
       return [
         `${indice + 1}. ${item.grupoNombre} - ${item.titulo}`,

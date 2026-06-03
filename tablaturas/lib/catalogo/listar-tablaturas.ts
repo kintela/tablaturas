@@ -1,7 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+  construirRutaArchivoTablatura,
+  type TipoArchivoTablatura,
+} from "@/lib/archivos-tablatura";
 
 type ArchivoRow = {
-  tipo_archivo: "pdf" | "imagen_previa" | "audio" | "zip" | "otro";
+  tipo_archivo: TipoArchivoTablatura;
   bucket: string;
   ruta: string;
   es_principal: boolean;
@@ -32,6 +36,8 @@ export type TablaturaListado = {
   } | null;
   previewUrl: string | null;
   pdfUrl: string | null;
+  midiUrl: string | null;
+  wavUrl: string | null;
 };
 
 async function crearUrlFirmada(bucket: string, ruta: string) {
@@ -131,11 +137,32 @@ export async function listarTablaturasPublicadas(terminoBusqueda?: string) {
       const principal =
         archivosOrdenados.find((archivo) => archivo.es_principal) ??
         archivosOrdenados.find((archivo) => archivo.tipo_archivo === "pdf");
+      const midi = archivosOrdenados.find((archivo) => archivo.tipo_archivo === "midi");
+      const wav = archivosOrdenados.find((archivo) => archivo.tipo_archivo === "wav");
 
-      const rutaPreviewInferida = `${tablatura.grupo_id}/${tablatura.id}/preview.svg`;
-      const rutaPdfInferida = `${tablatura.grupo_id}/${tablatura.id}/partitura.pdf`;
+      const rutaPreviewInferida = construirRutaArchivoTablatura({
+        grupoId: tablatura.grupo_id,
+        tablaturaId: tablatura.id,
+        tipoArchivo: "imagen_previa",
+        extensionPreview: "svg",
+      });
+      const rutaPdfInferida = construirRutaArchivoTablatura({
+        grupoId: tablatura.grupo_id,
+        tablaturaId: tablatura.id,
+        tipoArchivo: "pdf",
+      });
+      const rutaMidiInferida = construirRutaArchivoTablatura({
+        grupoId: tablatura.grupo_id,
+        tablaturaId: tablatura.id,
+        tipoArchivo: "midi",
+      });
+      const rutaWavInferida = construirRutaArchivoTablatura({
+        grupoId: tablatura.grupo_id,
+        tablaturaId: tablatura.id,
+        tipoArchivo: "wav",
+      });
 
-      const [previewUrl, pdfUrl] = await Promise.all([
+      const [previewUrl, pdfUrl, midiUrl, wavUrl] = await Promise.all([
         crearUrlFirmada(
           preview?.bucket ?? "tablaturas",
           preview?.ruta ?? rutaPreviewInferida
@@ -143,6 +170,14 @@ export async function listarTablaturasPublicadas(terminoBusqueda?: string) {
         crearUrlFirmada(
           principal?.bucket ?? "tablaturas",
           principal?.ruta ?? rutaPdfInferida
+        ),
+        crearUrlFirmada(
+          midi?.bucket ?? "tablaturas",
+          midi?.ruta ?? rutaMidiInferida
+        ),
+        crearUrlFirmada(
+          wav?.bucket ?? "tablaturas",
+          wav?.ruta ?? rutaWavInferida
         ),
       ]);
 
@@ -156,6 +191,8 @@ export async function listarTablaturasPublicadas(terminoBusqueda?: string) {
         grupo: gruposPorId.get(tablatura.grupo_id) ?? null,
         previewUrl,
         pdfUrl,
+        midiUrl,
+        wavUrl,
       } satisfies TablaturaListado;
     })
   );

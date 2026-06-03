@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
 
+import {
+  obtenerEtiquetaArchivo,
+  TIPOS_ARCHIVO_DESCARGABLES,
+  type TipoArchivoDescargable,
+} from "@/lib/archivos-tablatura";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getUsuarioYPerfilActual } from "@/lib/supabase/auth";
+
+type ArchivoDescarga = {
+  tipo: TipoArchivoDescargable;
+  etiqueta: string;
+  url: string | null;
+};
 
 export async function GET() {
   try {
@@ -31,15 +42,15 @@ export async function GET() {
 
     const [{ data: tablaturas, error: tablaturasError }, { data: archivos, error: archivosError }] =
       await Promise.all([
-        supabaseAdmin
-          .from("tablaturas")
-          .select("id, grupo_id, titulo_cancion")
-          .in("id", tablaturaIds),
+      supabaseAdmin
+        .from("tablaturas")
+        .select("id, grupo_id, titulo_cancion")
+        .in("id", tablaturaIds),
         supabaseAdmin
           .from("archivos_tablatura")
-          .select("tablatura_id, bucket, ruta, es_principal, orden")
+          .select("tablatura_id, bucket, ruta, tipo_archivo, es_principal, orden")
           .in("tablatura_id", tablaturaIds)
-          .eq("tipo_archivo", "pdf"),
+          .in("tipo_archivo", [...TIPOS_ARCHIVO_DESCARGABLES]),
       ]);
 
     if (tablaturasError) {
@@ -64,7 +75,13 @@ export async function GET() {
     const tablaturasPorId = new Map((tablaturas ?? []).map((tablatura) => [tablatura.id, tablatura]));
     const archivosPorTablatura = new Map<
       string,
-      Array<{ bucket: string; ruta: string; es_principal: boolean; orden: number }>
+      Array<{
+        bucket: string;
+        ruta: string;
+        tipo_archivo: TipoArchivoDescargable;
+        es_principal: boolean;
+        orden: number;
+      }>
     >();
 
     for (const archivo of archivos ?? []) {
@@ -72,6 +89,7 @@ export async function GET() {
       actuales.push({
         bucket: archivo.bucket,
         ruta: archivo.ruta,
+        tipo_archivo: archivo.tipo_archivo as TipoArchivoDescargable,
         es_principal: archivo.es_principal,
         orden: archivo.orden,
       });
@@ -85,7 +103,7 @@ export async function GET() {
     const items = await Promise.all(
       comprasPagadas.map(async (compra) => {
         const tablatura = tablaturasPorId.get(compra.tablatura_id);
-        const archivosPdf = [...(archivosPorTablatura.get(compra.tablatura_id) ?? [])].sort(
+        const archivos = [...(archivosPorTablatura.get(compra.tablatura_id) ?? [])].sort(
           (a, b) => {
             if (a.es_principal === b.es_principal) {
               return a.orden - b.orden;
@@ -95,16 +113,22 @@ export async function GET() {
           }
         );
 
-        const pdfPrincipal = archivosPdf[0];
-        let downloadUrl: string | null = null;
+        const archivosDescarga: ArchivoDescarga[] = await Promise.all(
+          archivos.map(async (archivo) => {
+            const { data } = await supabaseAdmin.storage
+              .from(archivo.bucket)
+              .createSignedUrl(archivo.ruta, ttlSegundos);
 
-        if (pdfPrincipal) {
-          const { data } = await supabaseAdmin.storage
-            .from(pdfPrincipal.bucket)
-            .createSignedUrl(pdfPrincipal.ruta, ttlSegundos);
+            return {
+              tipo: archivo.tipo_archivo,
+              etiqueta: obtenerEtiquetaArchivo(archivo.tipo_archivo),
+              url: data?.signedUrl ?? null,
+            };
+          })
+        );
 
-          downloadUrl = data?.signedUrl ?? null;
-        }
+        const downloadUrl =
+          archivosDescarga.find((archivo) => archivo.tipo === "pdf")?.url ?? null;
 
         return {
           pedidoId: compra.pedido_id,
@@ -114,6 +138,7 @@ export async function GET() {
           precioPagadoCentimos: compra.importe_pagado_centimos,
           moneda: compra.moneda,
           fechaPago: compra.fecha_pago,
+          archivosDescarga,
           downloadUrl,
         };
       })
