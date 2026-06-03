@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 
 import { AuthPanel } from "@/app/auth/auth-panel";
 import { BotonAudio } from "@/app/catalogo/boton-audio";
@@ -11,6 +12,22 @@ import {
   listarTablaturasPublicadas,
   type TablaturaListado,
 } from "@/lib/catalogo/listar-tablaturas";
+import { SITE_URL } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: "Catalogo de partituras",
+  description:
+    "Catálogo de partituras para batería con previews, PDF y packs PDF + MIDI General para estudio, DAW o EzDrummer.",
+  alternates: {
+    canonical: "/catalogo",
+  },
+  openGraph: {
+    url: `${SITE_URL}/catalogo`,
+    title: "Catalogo de partituras | Renteria Drums",
+    description:
+      "Catálogo de partituras para batería con previews, PDF y packs PDF + MIDI General para estudio, DAW o EzDrummer.",
+  },
+};
 
 type CatalogoPageProps = {
   searchParams?: Promise<{

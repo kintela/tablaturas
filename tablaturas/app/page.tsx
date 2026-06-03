@@ -1,8 +1,23 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 
 import { AuthPanel } from "@/app/auth/auth-panel";
+import { SITE_DESCRIPTION, SITE_URL } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+
+export const metadata: Metadata = {
+  title: "Clases de bateria en Leioa",
+  description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    url: SITE_URL,
+    title: "Clases de bateria en Leioa | Renteria Drums",
+    description: SITE_DESCRIPTION,
+  },
+};
 
 function TarjetaValor({
   titulo,
@@ -50,11 +65,8 @@ async function crearUrlLogo() {
 
 export default async function LandingPage() {
   const logoUrl = await crearUrlLogo();
-  const direccionAcademia = "Avenida Iparraguirre 82 (1B, Lonja) 48940 Leioa";
   const mapaEmbedUrl =
     "https://www.google.com/maps?q=Avenida%20Iparraguirre%2082%20(1B%2C%20Lonja)%2048940%20Leioa&z=17&output=embed";
-  const mapaAbrirUrl =
-    "https://www.google.com/maps/search/?api=1&query=Avenida+Iparraguirre+82+(1B,+Lonja)+48940+Leioa";
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#fcfbf8_32%,#eef5f8_100%)] px-4 py-4 text-zinc-950 sm:px-6 sm:py-6">

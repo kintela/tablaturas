@@ -5,6 +5,10 @@ import { PanelAdmin } from "./panel-admin";
 
 export const metadata = {
   title: "Admin | Tablaturas",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function AdminPage() {

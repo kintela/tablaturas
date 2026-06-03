@@ -1,7 +1,16 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { LimpiarCarrito } from "@/app/checkout/exito/limpiar-carrito";
 import { getUsuarioYPerfilActual } from "@/lib/supabase/auth";
+
+export const metadata: Metadata = {
+  title: "Pago completado",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function CheckoutExitoPage() {
   const { user, perfil } = await getUsuarioYPerfilActual();
