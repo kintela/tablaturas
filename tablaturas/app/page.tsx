@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AuthPanel } from "@/app/auth/auth-panel";
+import { BotonAudio } from "@/app/catalogo/boton-audio";
 import { BotonCarrito } from "@/app/catalogo/boton-carrito";
 import { PanelCarrito } from "@/app/catalogo/panel-carrito";
 import { BotonPreview } from "@/app/catalogo/boton-preview";
@@ -269,6 +270,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                 titulo={tablatura.tituloCancion}
                               />
                             ) : null}
+                            {tablatura.wavUrl ? (
+                              <BotonAudio audioUrl={tablatura.wavUrl} />
+                            ) : null}
                           </div>
 
                           <div className="flex shrink-0 flex-col items-end gap-3">
@@ -348,6 +352,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                         previewUrl={tablatura.previewUrl}
                         titulo={tablatura.tituloCancion}
                       />
+                    ) : null}
+                    {tablatura.wavUrl ? (
+                      <BotonAudio audioUrl={tablatura.wavUrl} />
                     ) : null}
                   </div>
 
