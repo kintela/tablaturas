@@ -26,7 +26,7 @@ function obtenerColumnas(valor?: string) {
     return valor;
   }
 
-  return "3";
+  return "4";
 }
 
 function crearHrefConVista(q: string, columnas: string, vista: string) {
@@ -42,6 +42,26 @@ function crearHrefConVista(q: string, columnas: string, vista: string) {
   return `/?${params.toString()}`;
 }
 
+function crearHrefAlternarColumnas(
+  q: string,
+  columnasActuales: string,
+  vista: string
+) {
+  return crearHrefConVista(
+    q,
+    columnasActuales === "6" ? "4" : "6",
+    vista
+  );
+}
+
+function crearHrefAlternarAgrupacion(q: string, columnas: string, vista: string) {
+  return crearHrefConVista(
+    q,
+    columnas,
+    vista === "agrupada" ? "rejilla" : "agrupada"
+  );
+}
+
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = searchParams ? await searchParams : undefined;
   const terminoBusqueda = params?.q ?? "";
@@ -52,9 +72,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const clasesGrid =
     columnas === "6"
       ? "grid gap-5 md:grid-cols-2 xl:grid-cols-6"
-      : columnas === "4"
-        ? "grid gap-5 md:grid-cols-2 xl:grid-cols-4"
-        : "grid gap-5 md:grid-cols-2 xl:grid-cols-3";
+      : "grid gap-5 md:grid-cols-2 xl:grid-cols-4";
 
   const gruposAgrupados = resultados.reduce<
     Array<{
@@ -131,17 +149,17 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
             <div className="flex flex-wrap gap-2">
               <Link
-                href={crearHrefConVista(terminoBusqueda, columnas, "rejilla")}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  vista === "rejilla"
-                    ? "bg-zinc-950 text-white"
-                    : "border border-black/10 bg-white text-zinc-700 hover:border-zinc-950"
-                }`}
-              >
-                Rejilla
-              </Link>
-              <Link
-                href={crearHrefConVista(terminoBusqueda, columnas, "agrupada")}
+                href={crearHrefAlternarAgrupacion(terminoBusqueda, columnas, vista)}
+                aria-label={
+                  vista === "agrupada"
+                    ? "Mostrar resultados sin agrupar"
+                    : "Agrupar resultados"
+                }
+                title={
+                  vista === "agrupada"
+                    ? "Mostrar resultados sin agrupar"
+                    : "Agrupar resultados"
+                }
                 className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                   vista === "agrupada"
                     ? "bg-zinc-950 text-white"
@@ -150,29 +168,33 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               >
                 Agrupar
               </Link>
-              <div className="hidden flex-wrap gap-2 sm:flex">
-                {[
-                  { valor: "3", etiqueta: "3 por fila" },
-                  { valor: "4", etiqueta: "4 por fila" },
-                  { valor: "6", etiqueta: "6 por fila" },
-                ].map((opcion) => {
-                  const activa = columnas === opcion.valor;
-
-                  return (
-                    <Link
-                      key={opcion.valor}
-                      href={crearHrefConVista(terminoBusqueda, opcion.valor, vista)}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                        activa
-                          ? "bg-zinc-950 text-white"
-                          : "border border-black/10 bg-white text-zinc-700 hover:border-zinc-950"
-                      }`}
-                    >
-                      {opcion.etiqueta}
-                    </Link>
-                  );
-                })}
-              </div>
+              <Link
+                href={crearHrefAlternarColumnas(terminoBusqueda, columnas, vista)}
+                aria-label={
+                  columnas === "6"
+                    ? "Mostrar 4 columnas por fila"
+                    : "Mostrar 6 columnas por fila"
+                }
+                title={
+                  columnas === "6"
+                    ? "Mostrar 4 columnas por fila"
+                    : "Mostrar 6 columnas por fila"
+                }
+                className={`flex h-14 w-14 items-center justify-center rounded-2xl border transition ${
+                  columnas === "6"
+                    ? "border-cyan-700 bg-cyan-950 text-cyan-100 shadow-[0_0_0_4px_rgba(8,145,178,0.14)]"
+                    : "border-cyan-200 bg-cyan-950 text-cyan-100 hover:border-cyan-400"
+                }`}
+              >
+                <span className="grid grid-cols-3 gap-1.5">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <span
+                      key={index}
+                      className="h-2.5 w-2.5 rounded-[3px] border border-current/80"
+                    />
+                  ))}
+                </span>
+              </Link>
             </div>
           </div>
         </section>
