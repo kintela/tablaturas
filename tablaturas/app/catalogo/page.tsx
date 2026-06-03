@@ -1,0 +1,433 @@
+import Link from "next/link";
+
+import { AuthPanel } from "@/app/auth/auth-panel";
+import { BotonAudio } from "@/app/catalogo/boton-audio";
+import { BotonCarrito } from "@/app/catalogo/boton-carrito";
+import { PanelCarrito } from "@/app/catalogo/panel-carrito";
+import { BotonPreview } from "@/app/catalogo/boton-preview";
+import { crearClaveCarrito } from "@/lib/carrito";
+import {
+  listarTablaturasPublicadas,
+  type TablaturaListado,
+} from "@/lib/catalogo/listar-tablaturas";
+
+type CatalogoPageProps = {
+  searchParams?: Promise<{
+    q?: string;
+    columnas?: string;
+    vista?: string;
+  }>;
+};
+
+function formatearPrecio(precioVentaCentimos: number, moneda: string) {
+  return new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: moneda,
+  }).format(precioVentaCentimos / 100);
+}
+
+function TagPrecio({
+  importeCentimos,
+  moneda,
+  etiqueta,
+  tooltip,
+}: {
+  importeCentimos: number;
+  moneda: string;
+  etiqueta: string;
+  tooltip: string;
+}) {
+  return (
+    <span
+      title={tooltip}
+      aria-label={tooltip}
+      className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-zinc-950"
+    >
+      {etiqueta}: {formatearPrecio(importeCentimos, moneda)}
+    </span>
+  );
+}
+
+function OpcionCompra({
+  tablatura,
+  etiqueta,
+  tooltip,
+  importeCentimos,
+  tipoCompra,
+}: {
+  tablatura: TablaturaListado;
+  etiqueta: string;
+  tooltip: string;
+  importeCentimos: number;
+  tipoCompra: "pdf" | "pack";
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <TagPrecio
+        importeCentimos={importeCentimos}
+        moneda={tablatura.moneda}
+        etiqueta={etiqueta}
+        tooltip={tooltip}
+      />
+      <BotonCarrito
+        item={{
+          clave: crearClaveCarrito(tablatura.id, tipoCompra),
+          id: tablatura.id,
+          tipoCompra,
+          etiquetaCompra: etiqueta,
+          titulo: tablatura.tituloCancion,
+          grupoNombre: tablatura.grupo?.nombre ?? "Grupo sin nombre",
+          precioVentaCentimos: importeCentimos,
+          moneda: tablatura.moneda,
+          previewUrl: tablatura.previewUrl,
+        }}
+      />
+    </div>
+  );
+}
+
+function obtenerColumnas(valor?: string) {
+  if (valor === "4" || valor === "6") {
+    return valor;
+  }
+
+  return "4";
+}
+
+function crearHrefConVista(q: string, columnas: string, vista: string) {
+  const params = new URLSearchParams();
+
+  if (q.trim()) {
+    params.set("q", q.trim());
+  }
+
+  params.set("columnas", columnas);
+  params.set("vista", vista);
+
+  return `/catalogo?${params.toString()}`;
+}
+
+function crearHrefAlternarColumnas(
+  q: string,
+  columnasActuales: string,
+  vista: string
+) {
+  return crearHrefConVista(
+    q,
+    columnasActuales === "6" ? "4" : "6",
+    vista
+  );
+}
+
+function crearHrefAlternarAgrupacion(q: string, columnas: string, vista: string) {
+  return crearHrefConVista(
+    q,
+    columnas,
+    vista === "agrupada" ? "rejilla" : "agrupada"
+  );
+}
+
+export default async function CatalogoPage({ searchParams }: CatalogoPageProps) {
+  const params = searchParams ? await searchParams : undefined;
+  const terminoBusqueda = params?.q ?? "";
+  const columnas = obtenerColumnas(params?.columnas);
+  const vista = params?.vista === "agrupada" ? "agrupada" : "rejilla";
+  const { resultados, total } = await listarTablaturasPublicadas(terminoBusqueda);
+
+  const clasesGrid =
+    columnas === "6"
+      ? "grid gap-5 md:grid-cols-2 xl:grid-cols-6"
+      : "grid gap-5 md:grid-cols-2 xl:grid-cols-4";
+
+  const gruposAgrupados = resultados.reduce<
+    Array<{
+      nombreGrupo: string;
+      slugGrupo: string;
+      items: typeof resultados;
+    }>
+  >((acc, tablatura) => {
+    const nombreGrupo = tablatura.grupo?.nombre ?? "Grupo sin nombre";
+    const slugGrupo = tablatura.grupo?.slug ?? "sin-grupo";
+    const existente = acc.find((grupo) => grupo.slugGrupo === slugGrupo);
+
+    if (existente) {
+      existente.items.push(tablatura);
+      return acc;
+    }
+
+    acc.push({
+      nombreGrupo,
+      slugGrupo,
+      items: [tablatura],
+    });
+
+    return acc;
+  }, []);
+
+  return (
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff4c2,_transparent_28%),linear-gradient(180deg,#fcfaf5_0%,#ffffff_45%,#f5f7fb_100%)] px-6 py-8 text-zinc-950">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
+        <section className="overflow-hidden rounded-[2.5rem] border border-black/10 bg-white/85 p-8 shadow-[0_30px_100px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-6xl">
+              <Link
+                href="/"
+                className="inline-flex rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500 transition hover:border-zinc-950 hover:text-zinc-950"
+              >
+                Volver a la portada
+              </Link>
+              <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl lg:whitespace-nowrap lg:text-[3.5rem]">
+                Partituras y recursos para bateristas
+              </h1>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-600 sm:text-base">
+                PDF listos para estudiar, previews visuales y, en algunos temas, pack con
+                PDF + MIDI General para llevarlo directo a tu DAW o plugin.
+              </p>
+            </div>
+
+            <div className="flex items-start justify-start gap-4 pl-4 lg:min-w-[300px]">
+              <PanelCarrito />
+              <AuthPanel />
+            </div>
+          </div>
+
+          <form className="mt-6 flex flex-col gap-3 rounded-[2rem] border border-black/10 bg-zinc-50 p-4 sm:flex-row">
+            <input
+              type="search"
+              name="q"
+              defaultValue={terminoBusqueda}
+              placeholder="Busca por canción o grupo"
+              className="h-14 flex-1 rounded-full border border-black/10 bg-white px-5 text-sm outline-none transition focus:border-zinc-950"
+            />
+            <button
+              type="submit"
+              className="h-14 rounded-full bg-zinc-950 px-7 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            >
+              Buscar
+            </button>
+          </form>
+        </section>
+
+        <section className="flex flex-col gap-4 rounded-[2rem] border border-black/10 bg-white/80 p-4 shadow-[0_20px_60px_rgba(15,23,42,0.04)]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                Vista de resultados
+              </p>
+              <p className="mt-1 text-sm text-zinc-600">
+                {total} tablaturas encontradas
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={crearHrefAlternarAgrupacion(terminoBusqueda, columnas, vista)}
+                aria-label={
+                  vista === "agrupada"
+                    ? "Mostrar resultados sin agrupar"
+                    : "Agrupar resultados"
+                }
+                title={
+                  vista === "agrupada"
+                    ? "Mostrar resultados sin agrupar"
+                    : "Agrupar resultados"
+                }
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  vista === "agrupada"
+                    ? "bg-zinc-950 text-white"
+                    : "border border-black/10 bg-white text-zinc-700 hover:border-zinc-950"
+                }`}
+              >
+                Agrupar
+              </Link>
+              <Link
+                href={crearHrefAlternarColumnas(terminoBusqueda, columnas, vista)}
+                aria-label={
+                  columnas === "6"
+                    ? "Mostrar 4 columnas por fila"
+                    : "Mostrar 6 columnas por fila"
+                }
+                title={
+                  columnas === "6"
+                    ? "Mostrar 4 columnas por fila"
+                    : "Mostrar 6 columnas por fila"
+                }
+                className={`flex h-14 w-14 items-center justify-center rounded-2xl border transition ${
+                  columnas === "6"
+                    ? "border-cyan-700 bg-cyan-950 text-cyan-100 shadow-[0_0_0_4px_rgba(8,145,178,0.14)]"
+                    : "border-cyan-200 bg-cyan-950 text-cyan-100 hover:border-cyan-400"
+                }`}
+              >
+                <span className="grid grid-cols-3 gap-1.5">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <span
+                      key={index}
+                      className="h-2.5 w-2.5 rounded-[3px] border border-current/80"
+                    />
+                  ))}
+                </span>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {vista === "agrupada" ? (
+          <section className="flex flex-col gap-8">
+            {resultados.length === 0 ? (
+              <div className="rounded-[2rem] border border-dashed border-black/10 bg-white/80 p-10 text-center">
+                <p className="text-lg font-medium text-zinc-950">
+                  No hay resultados para esa búsqueda.
+                </p>
+                <p className="mt-2 text-sm text-zinc-600">
+                  Prueba con otro nombre de canción o con el grupo.
+                </p>
+              </div>
+            ) : null}
+
+            {gruposAgrupados.map((grupo) => (
+              <section
+                key={grupo.slugGrupo}
+                className="rounded-[2rem] border border-black/10 bg-white/70 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.04)]"
+              >
+                <div className="mb-5 flex items-center justify-between gap-4 border-b border-black/10 pb-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                      Grupo
+                    </p>
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                      {grupo.nombreGrupo}
+                    </h2>
+                  </div>
+                  <span className="rounded-full bg-amber-200 px-3 py-2 text-sm font-semibold text-zinc-950">
+                    {grupo.items.length} partituras
+                  </span>
+                </div>
+
+                <div className={clasesGrid}>
+                  {grupo.items.map((tablatura) => (
+                    <article
+                      key={tablatura.id}
+                      className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
+                    >
+                      <div className="flex flex-1 flex-col gap-5 p-6">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                            {tablatura.grupo?.nombre ?? "Grupo sin nombre"}
+                          </p>
+                          <h3 className="mt-3 text-xl font-semibold tracking-tight text-zinc-950">
+                            {tablatura.tituloCancion}
+                          </h3>
+                        </div>
+
+                        <div className="mt-auto flex items-end justify-between gap-3">
+                          <div className="flex flex-wrap gap-3">
+                            {tablatura.previewUrl ? (
+                              <BotonPreview
+                                previewUrl={tablatura.previewUrl}
+                                titulo={tablatura.tituloCancion}
+                              />
+                            ) : null}
+                            {tablatura.wavUrl ? (
+                              <BotonAudio audioUrl={tablatura.wavUrl} />
+                            ) : null}
+                          </div>
+
+                          <div className="flex shrink-0 flex-col items-end gap-3">
+                            <div className="flex flex-col items-end gap-2">
+                              <OpcionCompra
+                                tablatura={tablatura}
+                                importeCentimos={tablatura.precioVentaCentimos}
+                                etiqueta="PDF"
+                                tipoCompra="pdf"
+                                tooltip="Precio del fichero PDF"
+                              />
+                              {tablatura.precioVentaCentimosPack > 0 ? (
+                                <OpcionCompra
+                                  tablatura={tablatura}
+                                  importeCentimos={tablatura.precioVentaCentimosPack}
+                                  etiqueta="PDF+MIDI"
+                                  tipoCompra="pack"
+                                  tooltip="Precio del PDF mas el fichero MIDI en formato General MIDI para poder insertarlo directamente en tu DAW o plugin como EzDrummer"
+                                />
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </section>
+        ) : (
+          <section className={clasesGrid}>
+            {resultados.length === 0 ? (
+              <div className="col-span-full rounded-[2rem] border border-dashed border-black/10 bg-white/80 p-10 text-center">
+                <p className="text-lg font-medium text-zinc-950">
+                  No hay resultados para esa búsqueda.
+                </p>
+                <p className="mt-2 text-sm text-zinc-600">
+                  Prueba con otro nombre de canción o con el grupo.
+                </p>
+              </div>
+            ) : null}
+
+            {resultados.map((tablatura) => (
+              <article
+                key={tablatura.id}
+                className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
+              >
+                <div className="flex flex-1 flex-col gap-5 p-6">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                      {tablatura.grupo?.nombre ?? "Grupo sin nombre"}
+                    </p>
+                    <h2 className="mt-3 text-xl font-semibold tracking-tight text-zinc-950">
+                      {tablatura.tituloCancion}
+                    </h2>
+                  </div>
+
+                  <div className="mt-auto flex items-end justify-between gap-3">
+                    <div className="flex flex-wrap gap-3">
+                      {tablatura.previewUrl ? (
+                        <BotonPreview
+                          previewUrl={tablatura.previewUrl}
+                          titulo={tablatura.tituloCancion}
+                        />
+                      ) : null}
+                      {tablatura.wavUrl ? (
+                        <BotonAudio audioUrl={tablatura.wavUrl} />
+                      ) : null}
+                    </div>
+
+                    <div className="flex shrink-0 flex-col items-end gap-3">
+                      <div className="flex flex-col items-end gap-2">
+                        <OpcionCompra
+                          tablatura={tablatura}
+                          importeCentimos={tablatura.precioVentaCentimos}
+                          etiqueta="PDF"
+                          tipoCompra="pdf"
+                          tooltip="Precio del fichero PDF"
+                        />
+                        {tablatura.precioVentaCentimosPack > 0 ? (
+                          <OpcionCompra
+                            tablatura={tablatura}
+                            importeCentimos={tablatura.precioVentaCentimosPack}
+                            etiqueta="PDF+MIDI"
+                            tipoCompra="pack"
+                            tooltip="Precio del PDF mas el fichero MIDI en formato General MIDI para poder insertarlo directamente en tu DAW o plugin como EzDrummer"
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </section>
+        )}
+      </div>
+    </main>
+  );
+}

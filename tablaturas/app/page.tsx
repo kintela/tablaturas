@@ -1,425 +1,266 @@
 import Link from "next/link";
 
 import { AuthPanel } from "@/app/auth/auth-panel";
-import { BotonAudio } from "@/app/catalogo/boton-audio";
-import { BotonCarrito } from "@/app/catalogo/boton-carrito";
-import { PanelCarrito } from "@/app/catalogo/panel-carrito";
-import { BotonPreview } from "@/app/catalogo/boton-preview";
-import { crearClaveCarrito } from "@/lib/carrito";
-import {
-  listarTablaturasPublicadas,
-  type TablaturaListado,
-} from "@/lib/catalogo/listar-tablaturas";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
-type HomePageProps = {
-  searchParams?: Promise<{
-    q?: string;
-    columnas?: string;
-    vista?: string;
-  }>;
-};
-
-function formatearPrecio(precioVentaCentimos: number, moneda: string) {
-  return new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: moneda,
-  }).format(precioVentaCentimos / 100);
-}
-
-function TagPrecio({
-  importeCentimos,
-  moneda,
-  etiqueta,
-  tooltip,
+function TarjetaValor({
+  titulo,
+  texto,
 }: {
-  importeCentimos: number;
-  moneda: string;
-  etiqueta: string;
-  tooltip: string;
+  titulo: string;
+  texto: string;
 }) {
   return (
-    <span
-      title={tooltip}
-      aria-label={tooltip}
-      className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-zinc-950"
-    >
-      {etiqueta}: {formatearPrecio(importeCentimos, moneda)}
-    </span>
+    <article className="rounded-[2rem] border border-black/10 bg-white/80 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
+        {titulo}
+      </p>
+      <p className="mt-3 text-base leading-7 text-zinc-700">{texto}</p>
+    </article>
   );
 }
 
-function OpcionCompra({
-  tablatura,
-  etiqueta,
-  tooltip,
-  importeCentimos,
-  tipoCompra,
+function PuntoPrograma({
+  titulo,
+  texto,
 }: {
-  tablatura: TablaturaListado;
-  etiqueta: string;
-  tooltip: string;
-  importeCentimos: number;
-  tipoCompra: "pdf" | "pack";
+  titulo: string;
+  texto: string;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <TagPrecio
-        importeCentimos={importeCentimos}
-        moneda={tablatura.moneda}
-        etiqueta={etiqueta}
-        tooltip={tooltip}
-      />
-      <BotonCarrito
-        item={{
-          clave: crearClaveCarrito(tablatura.id, tipoCompra),
-          id: tablatura.id,
-          tipoCompra,
-          etiquetaCompra: etiqueta,
-          titulo: tablatura.tituloCancion,
-          grupoNombre: tablatura.grupo?.nombre ?? "Grupo sin nombre",
-          precioVentaCentimos: importeCentimos,
-          moneda: tablatura.moneda,
-          previewUrl: tablatura.previewUrl,
-        }}
-      />
+    <div className="rounded-[1.75rem] border border-black/10 bg-white p-5">
+      <h3 className="text-lg font-semibold tracking-tight text-zinc-950">{titulo}</h3>
+      <p className="mt-2 text-sm leading-7 text-zinc-600">{texto}</p>
     </div>
   );
 }
 
-function obtenerColumnas(valor?: string) {
-  if (valor === "4" || valor === "6") {
-    return valor;
+async function crearUrlLogo() {
+  const { data, error } = await supabaseAdmin.storage
+    .from("landing")
+    .createSignedUrl("logo_academia.jpeg", 60 * 60 * 24);
+
+  if (error) {
+    return null;
   }
 
-  return "4";
+  return data.signedUrl;
 }
 
-function crearHrefConVista(q: string, columnas: string, vista: string) {
-  const params = new URLSearchParams();
-
-  if (q.trim()) {
-    params.set("q", q.trim());
-  }
-
-  params.set("columnas", columnas);
-  params.set("vista", vista);
-
-  return `/?${params.toString()}`;
-}
-
-function crearHrefAlternarColumnas(
-  q: string,
-  columnasActuales: string,
-  vista: string
-) {
-  return crearHrefConVista(
-    q,
-    columnasActuales === "6" ? "4" : "6",
-    vista
-  );
-}
-
-function crearHrefAlternarAgrupacion(q: string, columnas: string, vista: string) {
-  return crearHrefConVista(
-    q,
-    columnas,
-    vista === "agrupada" ? "rejilla" : "agrupada"
-  );
-}
-
-export default async function HomePage({ searchParams }: HomePageProps) {
-  const params = searchParams ? await searchParams : undefined;
-  const terminoBusqueda = params?.q ?? "";
-  const columnas = obtenerColumnas(params?.columnas);
-  const vista = params?.vista === "agrupada" ? "agrupada" : "rejilla";
-  const { resultados, total } = await listarTablaturasPublicadas(terminoBusqueda);
-
-  const clasesGrid =
-    columnas === "6"
-      ? "grid gap-5 md:grid-cols-2 xl:grid-cols-6"
-      : "grid gap-5 md:grid-cols-2 xl:grid-cols-4";
-
-  const gruposAgrupados = resultados.reduce<
-    Array<{
-      nombreGrupo: string;
-      slugGrupo: string;
-      items: typeof resultados;
-    }>
-  >((acc, tablatura) => {
-    const nombreGrupo = tablatura.grupo?.nombre ?? "Grupo sin nombre";
-    const slugGrupo = tablatura.grupo?.slug ?? "sin-grupo";
-    const existente = acc.find((grupo) => grupo.slugGrupo === slugGrupo);
-
-    if (existente) {
-      existente.items.push(tablatura);
-      return acc;
-    }
-
-    acc.push({
-      nombreGrupo,
-      slugGrupo,
-      items: [tablatura],
-    });
-
-    return acc;
-  }, []);
+export default async function LandingPage() {
+  const logoUrl = await crearUrlLogo();
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff4c2,_transparent_28%),linear-gradient(180deg,#fcfaf5_0%,#ffffff_45%,#f5f7fb_100%)] px-6 py-8 text-zinc-950">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-        <section className="overflow-hidden rounded-[2.5rem] border border-black/10 bg-white/85 p-8 shadow-[0_30px_100px_rgba(15,23,42,0.08)] backdrop-blur">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-6xl">
-              <span className="text-xs font-semibold uppercase tracking-[0.32em] text-zinc-500">
-                Catálogo de batería
-              </span>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl lg:whitespace-nowrap lg:text-[3.5rem]">
-                Encuentra la partitura que necesitas
-              </h1>
-            </div>
-
-            <div className="flex items-start justify-start gap-4 pl-4 lg:min-w-[300px]">
-              <PanelCarrito />
-              <AuthPanel />
-            </div>
-          </div>
-
-          <form className="mt-6 flex flex-col gap-3 rounded-[2rem] border border-black/10 bg-zinc-50 p-4 sm:flex-row">
-            <input
-              type="search"
-              name="q"
-              defaultValue={terminoBusqueda}
-              placeholder="Busca por canción o grupo"
-              className="h-14 flex-1 rounded-full border border-black/10 bg-white px-5 text-sm outline-none transition focus:border-zinc-950"
-            />
-            <button
-              type="submit"
-              className="h-14 rounded-full bg-zinc-950 px-7 text-sm font-semibold text-white transition hover:bg-zinc-800"
-            >
-              Buscar
-            </button>
-          </form>
-        </section>
-
-        <section className="flex flex-col gap-4 rounded-[2rem] border border-black/10 bg-white/80 p-4 shadow-[0_20px_60px_rgba(15,23,42,0.04)]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
-                Vista de resultados
-              </p>
-              <p className="mt-1 text-sm text-zinc-600">
-                {total} tablaturas encontradas
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={crearHrefAlternarAgrupacion(terminoBusqueda, columnas, vista)}
-                aria-label={
-                  vista === "agrupada"
-                    ? "Mostrar resultados sin agrupar"
-                    : "Agrupar resultados"
-                }
-                title={
-                  vista === "agrupada"
-                    ? "Mostrar resultados sin agrupar"
-                    : "Agrupar resultados"
-                }
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  vista === "agrupada"
-                    ? "bg-zinc-950 text-white"
-                    : "border border-black/10 bg-white text-zinc-700 hover:border-zinc-950"
-                }`}
-              >
-                Agrupar
-              </Link>
-              <Link
-                href={crearHrefAlternarColumnas(terminoBusqueda, columnas, vista)}
-                aria-label={
-                  columnas === "6"
-                    ? "Mostrar 4 columnas por fila"
-                    : "Mostrar 6 columnas por fila"
-                }
-                title={
-                  columnas === "6"
-                    ? "Mostrar 4 columnas por fila"
-                    : "Mostrar 6 columnas por fila"
-                }
-                className={`flex h-14 w-14 items-center justify-center rounded-2xl border transition ${
-                  columnas === "6"
-                    ? "border-cyan-700 bg-cyan-950 text-cyan-100 shadow-[0_0_0_4px_rgba(8,145,178,0.14)]"
-                    : "border-cyan-200 bg-cyan-950 text-cyan-100 hover:border-cyan-400"
-                }`}
-              >
-                <span className="grid grid-cols-3 gap-1.5">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <span
-                      key={index}
-                      className="h-2.5 w-2.5 rounded-[3px] border border-current/80"
-                    />
-                  ))}
-                </span>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {vista === "agrupada" ? (
-          <section className="flex flex-col gap-8">
-            {resultados.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-black/10 bg-white/80 p-10 text-center">
-                <p className="text-lg font-medium text-zinc-950">
-                  No hay resultados para esa búsqueda.
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#fcfbf8_32%,#eef5f8_100%)] px-4 py-4 text-zinc-950 sm:px-6 sm:py-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <section className="overflow-hidden rounded-[2.5rem] border border-black/10 bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.24),_transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(8,145,178,0.18),_transparent_28%),linear-gradient(135deg,#111827_0%,#1f2937_42%,#0f172a_100%)] text-white shadow-[0_30px_100px_rgba(15,23,42,0.22)]">
+          <div className="flex flex-col gap-10 p-6 sm:p-8 lg:p-10">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-4xl lg:max-w-3xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.34em] text-amber-200/80">
+                  Clases de bateria + partituras
                 </p>
-                <p className="mt-2 text-sm text-zinc-600">
-                  Prueba con otro nombre de canción o con el grupo.
+                <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight sm:text-5xl lg:text-7xl">
+                  Un espacio en Leioa para tocar mejor, estudiar mejor y sonar con criterio.
+                </h1>
+                <p className="mt-6 max-w-2xl text-base leading-8 text-zinc-300 sm:text-lg">
+                  Profesor de bateria, trabajo personalizado y material propio para que cada
+                  alumno avance con una rutina clara. Clases presenciales en local y catálogo
+                  digital de partituras para seguir estudiando entre sesiones.
                 </p>
               </div>
-            ) : null}
 
-            {gruposAgrupados.map((grupo) => (
-              <section
-                key={grupo.slugGrupo}
-                className="rounded-[2rem] border border-black/10 bg-white/70 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.04)]"
-              >
-                <div className="mb-5 flex items-center justify-between gap-4 border-b border-black/10 pb-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
-                      Grupo
-                    </p>
-                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
-                      {grupo.nombreGrupo}
-                    </h2>
-                  </div>
-                  <span className="rounded-full bg-amber-200 px-3 py-2 text-sm font-semibold text-zinc-950">
-                    {grupo.items.length} partituras
-                  </span>
-                </div>
-
-                <div className={clasesGrid}>
-                  {grupo.items.map((tablatura) => (
-                    <article
-                      key={tablatura.id}
-                      className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
-                    >
-                      <div className="flex flex-1 flex-col gap-5 p-6">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
-                            {tablatura.grupo?.nombre ?? "Grupo sin nombre"}
-                          </p>
-                          <h3 className="mt-3 text-xl font-semibold tracking-tight text-zinc-950">
-                            {tablatura.tituloCancion}
-                          </h3>
-                        </div>
-
-                        <div className="mt-auto flex items-end justify-between gap-3">
-                          <div className="flex flex-wrap gap-3">
-                            {tablatura.previewUrl ? (
-                              <BotonPreview
-                                previewUrl={tablatura.previewUrl}
-                                titulo={tablatura.tituloCancion}
-                              />
-                            ) : null}
-                            {tablatura.wavUrl ? (
-                              <BotonAudio audioUrl={tablatura.wavUrl} />
-                            ) : null}
-                          </div>
-
-                          <div className="flex shrink-0 flex-col items-end gap-3">
-                            <div className="flex flex-col items-end gap-2">
-                              <OpcionCompra
-                                tablatura={tablatura}
-                                importeCentimos={tablatura.precioVentaCentimos}
-                                etiqueta="PDF"
-                                tipoCompra="pdf"
-                                tooltip="Precio del fichero PDF"
-                              />
-                              {tablatura.precioVentaCentimosPack > 0 ? (
-                                <OpcionCompra
-                                  tablatura={tablatura}
-                                  importeCentimos={tablatura.precioVentaCentimosPack}
-                                  etiqueta="PDF+MIDI"
-                                  tipoCompra="pack"
-                                  tooltip="Precio del PDF mas el fichero MIDI en formato General MIDI para poder insertarlo directamente en tu DAW o plugin como EzDrummer"
-                                />
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </section>
-        ) : (
-        <section className={clasesGrid}>
-          {resultados.length === 0 ? (
-            <div className="col-span-full rounded-[2rem] border border-dashed border-black/10 bg-white/80 p-10 text-center">
-              <p className="text-lg font-medium text-zinc-950">
-                No hay resultados para esa búsqueda.
-              </p>
-              <p className="mt-2 text-sm text-zinc-600">
-                Prueba con otro nombre de canción o con el grupo.
-              </p>
-            </div>
-          ) : null}
-
-          {resultados.map((tablatura) => (
-            <article
-              key={tablatura.id}
-              className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
-            >
-              <div className="flex flex-1 flex-col gap-5 p-6">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
-                    {tablatura.grupo?.nombre ?? "Grupo sin nombre"}
-                  </p>
-                  <h2 className="mt-3 text-xl font-semibold tracking-tight text-zinc-950">
-                    {tablatura.tituloCancion}
-                  </h2>
-                </div>
-
-                <div className="mt-auto flex items-end justify-between gap-3">
-                  <div className="flex flex-wrap gap-3">
-                    {tablatura.previewUrl ? (
-                      <BotonPreview
-                        previewUrl={tablatura.previewUrl}
-                        titulo={tablatura.tituloCancion}
+              <div className="flex flex-col items-end gap-6 lg:min-w-[360px] lg:max-w-[360px]">
+                <AuthPanel />
+                {logoUrl ? (
+                  <div className="hidden w-full lg:block">
+                    <div className="rounded-[2.25rem] border border-white/12 bg-white/8 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.22)] backdrop-blur">
+                      <div
+                        aria-label="Logo de la academia"
+                        className="h-[320px] w-full rounded-[1.75rem] bg-cover bg-center bg-no-repeat"
+                        style={{ backgroundImage: `url(${logoUrl})` }}
                       />
-                    ) : null}
-                    {tablatura.wavUrl ? (
-                      <BotonAudio audioUrl={tablatura.wavUrl} />
-                    ) : null}
-                  </div>
-
-                  <div className="flex shrink-0 flex-col items-end gap-3">
-                    <div className="flex flex-col items-end gap-2">
-                      <OpcionCompra
-                        tablatura={tablatura}
-                        importeCentimos={tablatura.precioVentaCentimos}
-                        etiqueta="PDF"
-                        tipoCompra="pdf"
-                        tooltip="Precio del fichero PDF"
-                      />
-                      {tablatura.precioVentaCentimosPack > 0 ? (
-                        <OpcionCompra
-                          tablatura={tablatura}
-                          importeCentimos={tablatura.precioVentaCentimosPack}
-                          etiqueta="PDF+MIDI"
-                          tipoCompra="pack"
-                          tooltip="Precio del PDF mas el fichero MIDI en formato General MIDI para poder insertarlo directamente en tu DAW o plugin como EzDrummer"
-                        />
-                      ) : null}
                     </div>
                   </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">
+              <div className="rounded-[2rem] border border-white/10 bg-white/8 p-6 backdrop-blur">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-300">
+                      Que ofrezco
+                    </p>
+                    <p className="mt-3 max-w-xl text-2xl font-semibold tracking-tight sm:text-3xl">
+                      Clases presenciales, enfoque real de estudio y recursos listos para usar.
+                    </p>
+                  </div>
+                  <div className="rounded-[1.5rem] bg-amber-300 px-5 py-4 text-zinc-950">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em]">
+                      Local
+                    </p>
+                    <p className="mt-2 text-xl font-semibold">Leioa</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <Link
+                    href="/catalogo"
+                    className="inline-flex items-center justify-center rounded-full bg-amber-300 px-6 py-4 text-sm font-semibold text-zinc-950 transition hover:bg-amber-200"
+                  >
+                    Ver partituras
+                  </Link>
+                  <a
+                    href="#clases"
+                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-4 text-sm font-semibold text-white transition hover:border-white/50 hover:bg-white/8"
+                  >
+                    Ver clases
+                  </a>
                 </div>
               </div>
-            </article>
-          ))}
+
+              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                <div className="rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-300">
+                    Presencial
+                  </p>
+                  <p className="mt-3 text-lg font-semibold">Clases adaptadas al nivel real</p>
+                </div>
+                <div className="rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-300">
+                    Material
+                  </p>
+                  <p className="mt-3 text-lg font-semibold">PDFs, previews y recursos listos para estudiar</p>
+                </div>
+                <div className="rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-300">
+                    Produccion
+                  </p>
+                  <p className="mt-3 text-lg font-semibold">Packs con MIDI General para DAW o EzDrummer</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
-        )}
+
+        <section id="clases" className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="rounded-[2.25rem] border border-black/10 bg-white/85 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.06)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
+              Clases en Leioa
+            </p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">
+              Trabajo tecnico, musicalidad y metodo para tocar con mas control.
+            </h2>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-zinc-600">
+              La idea no es acumular ejercicios. La idea es entender que estudiar, por que
+              estudiarlo y como hacerlo sonar mejor en contexto real: grooves, lectura,
+              dinamica, tempo, independencia y repertorio.
+            </p>
+
+            <div className="mt-8 grid gap-4">
+              <PuntoPrograma
+                titulo="Clases uno a uno"
+                texto="Sesiones presenciales enfocadas al punto exacto en el que estas: iniciacion, lectura, tecnica, repertorio, preparacion de pruebas o puesta a punto para directo."
+              />
+              <PuntoPrograma
+                titulo="Rutinas claras para estudiar en casa"
+                texto="Cada bloque de trabajo sale con objetivos concretos. Menos dispersión, mas tiempo bien invertido y una progresion facil de medir semana a semana."
+              />
+              <PuntoPrograma
+                titulo="Material complementario"
+                texto="Partituras, archivos de apoyo y, cuando encaja, recursos MIDI para practicar con claqueta, secuencias o plugins de bateria."
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-6">
+            <TarjetaValor
+              titulo="Para quien"
+              texto="Alumnos que empiezan desde cero, bateristas que quieren ordenar su estudio y gente que necesita material concreto para preparar canciones y repertorio."
+            />
+            <TarjetaValor
+              titulo="Partituras"
+              texto="Catálogo digital con compra directa de PDFs y, en algunos temas, opcion PDF + MIDI para practicar, editar o producir con mas rapidez."
+            />
+            <TarjetaValor
+              titulo="Enfoque"
+              texto="Menos postureo, mas tocar. Un trabajo pensado para que el alumno salga del local con claridad y vuelva a sentarse en la bateria sabiendo exactamente que hacer."
+            />
+          </div>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[0.88fr_1.12fr]">
+          <div className="rounded-[2.25rem] border border-black/10 bg-[linear-gradient(135deg,#f59e0b_0%,#fbbf24_100%)] p-8 text-zinc-950 shadow-[0_24px_70px_rgba(245,158,11,0.18)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-800/70">
+              Servicio digital
+            </p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+              Si no puedes venir al local, el catálogo sigue siendo una puerta de entrada.
+            </h2>
+            <p className="mt-5 text-base leading-8 text-zinc-900/80">
+              El escaparate no termina en las clases. Tambien hay un trabajo de preparación de
+              material para que puedas comprar la partitura exacta, revisar el preview y elegir
+              si solo quieres el PDF o el pack con MIDI.
+            </p>
+            <div className="mt-8">
+              <Link
+                href="/catalogo"
+                className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-6 py-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
+              >
+                Entrar al catálogo
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-[2.25rem] border border-black/10 bg-white/85 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.06)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
+              Primera version
+            </p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">
+              Un primer escaparate moderno para enseñar clases y venta de partituras sin mezclarlo todo.
+            </h2>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[1.75rem] border border-black/10 bg-zinc-50 p-5">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  Clases
+                </p>
+                <p className="mt-3 text-sm leading-7 text-zinc-600">
+                  Explica la propuesta del profesor, el enfoque y el tipo de alumno para el que
+                  encaja mejor.
+                </p>
+              </div>
+              <div className="rounded-[1.75rem] border border-black/10 bg-zinc-50 p-5">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  Catalogo
+                </p>
+                <p className="mt-3 text-sm leading-7 text-zinc-600">
+                  Separa claramente la experiencia de compra para que no compita visualmente con
+                  la presentación del servicio.
+                </p>
+              </div>
+              <div className="rounded-[1.75rem] border border-black/10 bg-zinc-50 p-5">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  Local
+                </p>
+                <p className="mt-3 text-sm leading-7 text-zinc-600">
+                  Mantiene el anclaje territorial en Leioa, que da contexto y cercania a la
+                  oferta de clases.
+                </p>
+              </div>
+              <div className="rounded-[1.75rem] border border-black/10 bg-zinc-50 p-5">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  Evolucion
+                </p>
+                <p className="mt-3 text-sm leading-7 text-zinc-600">
+                  A partir de aqui ya podemos afinar copies, fotos, testimonios, contacto y
+                  jerarquia comercial.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   );
