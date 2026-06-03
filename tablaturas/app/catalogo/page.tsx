@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { AuthPanel } from "@/app/auth/auth-panel";
 import { BotonAudio } from "@/app/catalogo/boton-audio";
@@ -187,7 +188,9 @@ export default async function CatalogoPage({ searchParams }: CatalogoPageProps) 
 
             <div className="flex items-start justify-start gap-4 pl-4 lg:min-w-[300px]">
               <PanelCarrito />
-              <AuthPanel />
+              <Suspense fallback={<div className="h-16 w-16 rounded-full border border-black/10 bg-white" />}>
+                <AuthPanel />
+              </Suspense>
             </div>
           </div>
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { AuthPanel } from "@/app/auth/auth-panel";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -49,6 +50,11 @@ async function crearUrlLogo() {
 
 export default async function LandingPage() {
   const logoUrl = await crearUrlLogo();
+  const direccionAcademia = "Avenida Iparraguirre 82 (1B, Lonja) 48940 Leioa";
+  const mapaEmbedUrl =
+    "https://www.google.com/maps?q=Avenida%20Iparraguirre%2082%20(1B%2C%20Lonja)%2048940%20Leioa&z=17&output=embed";
+  const mapaAbrirUrl =
+    "https://www.google.com/maps/search/?api=1&query=Avenida+Iparraguirre+82+(1B,+Lonja)+48940+Leioa";
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#fcfbf8_32%,#eef5f8_100%)] px-4 py-4 text-zinc-950 sm:px-6 sm:py-6">
@@ -71,7 +77,9 @@ export default async function LandingPage() {
               </div>
 
               <div className="flex flex-col items-end gap-6 lg:min-w-[360px] lg:max-w-[360px]">
-                <AuthPanel theme="dark" />
+                <Suspense fallback={<div className="h-16 w-16 rounded-full border border-white/15 bg-white/10" />}>
+                  <AuthPanel theme="dark" />
+                </Suspense>
                 {logoUrl ? (
                   <div className="hidden w-full lg:block">
                     <div className="rounded-[2.25rem] border border-white/12 bg-white/8 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.22)] backdrop-blur">
@@ -112,12 +120,6 @@ export default async function LandingPage() {
                   >
                     Ver partituras
                   </Link>
-                  <a
-                    href="#clases"
-                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-4 text-sm font-semibold text-white transition hover:border-white/50 hover:bg-white/8"
-                  >
-                    Ver clases
-                  </a>
                 </div>
               </div>
 
@@ -187,6 +189,18 @@ export default async function LandingPage() {
             <TarjetaValor
               titulo="Enfoque"
               texto="Menos postureo, mas tocar. Un trabajo pensado para que el alumno salga del local con claridad y vuelva a sentarse en la bateria sabiendo exactamente que hacer."
+            />
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-[2.25rem] border border-black/10 bg-white/85 p-3 shadow-[0_24px_70px_rgba(15,23,42,0.06)]">
+          <div className="relative overflow-hidden rounded-[1.75rem] border border-black/10 bg-zinc-100">
+            <iframe
+              title="Mapa de la academia en Leioa"
+              src={mapaEmbedUrl}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="h-[520px] w-full"
             />
           </div>
         </section>
@@ -261,6 +275,18 @@ export default async function LandingPage() {
             </div>
           </div>
         </section>
+
+        <footer className="rounded-[2rem] border border-black/10 bg-white/70 px-6 py-5 text-sm text-zinc-600 shadow-[0_18px_50px_rgba(15,23,42,0.04)]">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="font-medium text-zinc-950">Renteria Drums</p>
+            <a
+              href="mailto:info@renteriadrums.com"
+              className="transition hover:text-zinc-950"
+            >
+              info@renteriadrums.com
+            </a>
+          </div>
+        </footer>
       </div>
     </main>
   );
