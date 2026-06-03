@@ -27,6 +27,8 @@ type Tablatura = {
   precio_venta_centimos: number;
   moneda: string;
   publicada: boolean;
+  total_ventas: number;
+  importe_acumulado_centimos: number;
   fecha_creacion?: string;
 };
 
@@ -428,6 +430,8 @@ export function PanelAdmin() {
                   <th className="px-4 py-3 font-semibold">Grupo</th>
                   <th className="px-4 py-3 font-semibold">Canción</th>
                   <th className="px-4 py-3 font-semibold">Precio</th>
+                  <th className="px-4 py-3 font-semibold">Ventas</th>
+                  <th className="px-4 py-3 font-semibold">Importe acumulado</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Acciones</th>
                 </tr>
@@ -450,6 +454,15 @@ export function PanelAdmin() {
                     <td className="px-4 py-4 text-zinc-700">
                       {formatearPrecio(
                         tablatura.precio_venta_centimos,
+                        tablatura.moneda
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-zinc-700">
+                      {tablatura.total_ventas}
+                    </td>
+                    <td className="px-4 py-4 text-zinc-700">
+                      {formatearPrecio(
+                        tablatura.importe_acumulado_centimos,
                         tablatura.moneda
                       )}
                     </td>

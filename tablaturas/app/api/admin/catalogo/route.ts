@@ -206,10 +206,48 @@ export async function GET() {
       throw tablaturasError;
     }
 
+    const tablaturaIds = (tablaturas ?? []).map((tablatura) => tablatura.id);
+    let metricasPorTablatura = new Map<
+      string,
+      { totalVentas: number; importeAcumuladoCentimos: number }
+    >();
+
+    if (tablaturaIds.length > 0) {
+      const { data: comprasPagadas, error: comprasPagadasError } = await supabaseAdmin
+        .from("compras")
+        .select("tablatura_id, importe_pagado_centimos")
+        .in("tablatura_id", tablaturaIds)
+        .eq("estado", "pagada");
+
+      if (comprasPagadasError) {
+        throw comprasPagadasError;
+      }
+
+      metricasPorTablatura = (comprasPagadas ?? []).reduce((acc, compra) => {
+        const actual = acc.get(compra.tablatura_id) ?? {
+          totalVentas: 0,
+          importeAcumuladoCentimos: 0,
+        };
+
+        actual.totalVentas += 1;
+        actual.importeAcumuladoCentimos += compra.importe_pagado_centimos;
+        acc.set(compra.tablatura_id, actual);
+        return acc;
+      }, metricasPorTablatura);
+    }
+
     return NextResponse.json({
       ok: true,
       grupos: grupos ?? [],
-      tablaturas: tablaturas ?? [],
+      tablaturas: (tablaturas ?? []).map((tablatura) => {
+        const metricas = metricasPorTablatura.get(tablatura.id);
+
+        return {
+          ...tablatura,
+          total_ventas: metricas?.totalVentas ?? 0,
+          importe_acumulado_centimos: metricas?.importeAcumuladoCentimos ?? 0,
+        };
+      }),
     });
   } catch (error) {
     const mensaje =
