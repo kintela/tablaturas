@@ -22,6 +22,28 @@ function formatearPrecio(precioVentaCentimos: number, moneda: string) {
   }).format(precioVentaCentimos / 100);
 }
 
+function TagPrecio({
+  importeCentimos,
+  moneda,
+  etiqueta,
+  tooltip,
+}: {
+  importeCentimos: number;
+  moneda: string;
+  etiqueta: string;
+  tooltip: string;
+}) {
+  return (
+    <span
+      title={tooltip}
+      aria-label={tooltip}
+      className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-zinc-950"
+    >
+      {etiqueta}: {formatearPrecio(importeCentimos, moneda)}
+    </span>
+  );
+}
+
 function obtenerColumnas(valor?: string) {
   if (valor === "4" || valor === "6") {
     return valor;
@@ -276,12 +298,22 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                           </div>
 
                           <div className="flex shrink-0 flex-col items-end gap-3">
-                            <span className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-zinc-950">
-                              {formatearPrecio(
-                                tablatura.precioVentaCentimos,
-                                tablatura.moneda
-                              )}
-                            </span>
+                            <div className="flex flex-col items-end gap-2">
+                              <TagPrecio
+                                importeCentimos={tablatura.precioVentaCentimos}
+                                moneda={tablatura.moneda}
+                                etiqueta="PDF"
+                                tooltip="Precio del fichero PDF"
+                              />
+                              {tablatura.precioVentaCentimosPack > 0 ? (
+                                <TagPrecio
+                                  importeCentimos={tablatura.precioVentaCentimosPack}
+                                  moneda={tablatura.moneda}
+                                  etiqueta="Pack"
+                                  tooltip="Precio del PDF mas el fichero MIDI en formato General MIDI para poder insertarlo directamente en tu DAW o plugin como EzDrummer"
+                                />
+                              ) : null}
+                            </div>
 
                             <BotonCarrito
                               item={{
@@ -359,12 +391,22 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   </div>
 
                   <div className="flex shrink-0 flex-col items-end gap-3">
-                    <span className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-zinc-950">
-                      {formatearPrecio(
-                        tablatura.precioVentaCentimos,
-                        tablatura.moneda
-                      )}
-                    </span>
+                    <div className="flex flex-col items-end gap-2">
+                      <TagPrecio
+                        importeCentimos={tablatura.precioVentaCentimos}
+                        moneda={tablatura.moneda}
+                        etiqueta="PDF"
+                        tooltip="Precio del fichero PDF"
+                      />
+                      {tablatura.precioVentaCentimosPack > 0 ? (
+                        <TagPrecio
+                          importeCentimos={tablatura.precioVentaCentimosPack}
+                          moneda={tablatura.moneda}
+                          etiqueta="Pack"
+                          tooltip="Precio del PDF mas el fichero MIDI en formato General MIDI para poder insertarlo directamente en tu DAW o plugin como EzDrummer"
+                        />
+                      ) : null}
+                    </div>
 
                     <BotonCarrito
                       item={{

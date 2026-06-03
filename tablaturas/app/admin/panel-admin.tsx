@@ -25,6 +25,7 @@ type Tablatura = {
   slug: string;
   descripcion: string | null;
   precio_venta_centimos: number;
+  precio_venta_centimos_pack: number;
   moneda: string;
   publicada: boolean;
   total_ventas: number;
@@ -273,6 +274,7 @@ export function PanelAdmin() {
   const [tituloCancion, setTituloCancion] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [precioVenta, setPrecioVenta] = useState("4,99");
+  const [precioVentaPack, setPrecioVentaPack] = useState("7,99");
   const [archivoPdf, setArchivoPdf] = useState<File | null>(null);
   const [archivoPreview, setArchivoPreview] = useState<File | null>(null);
   const [archivoMidi, setArchivoMidi] = useState<File | null>(null);
@@ -356,6 +358,7 @@ export function PanelAdmin() {
     setTituloCancion("");
     setDescripcion("");
     setPrecioVenta("4,99");
+    setPrecioVentaPack("7,99");
     setArchivoPdf(null);
     setArchivoPreview(null);
     setArchivoMidi(null);
@@ -396,11 +399,20 @@ export function PanelAdmin() {
 
       const formData = new FormData();
       const precioVentaCentimos = convertirPrecioTextoACentimos(precioVenta);
+      const precioVentaCentimosPack = convertirPrecioTextoACentimos(precioVentaPack);
 
       if (precioVentaCentimos === null) {
         setResultado({
           ok: false,
           error: "El precio debe tener un formato válido. Ejemplo: 4,99",
+        });
+        return;
+      }
+
+      if (precioVentaCentimosPack === null) {
+        setResultado({
+          ok: false,
+          error: "El precio del pack debe tener un formato válido. Ejemplo: 7,99",
         });
         return;
       }
@@ -413,6 +425,7 @@ export function PanelAdmin() {
       formData.set("tituloCancion", tituloCancion);
       formData.set("descripcion", descripcion);
       formData.set("precioVentaCentimos", String(precioVentaCentimos));
+      formData.set("precioVentaCentimosPack", String(precioVentaCentimosPack));
       formData.set("moneda", "EUR");
       formData.set("publicada", String(publicada));
 
@@ -458,6 +471,9 @@ export function PanelAdmin() {
     setDescripcion(tablatura.descripcion ?? "");
     setPrecioVenta(
       (tablatura.precio_venta_centimos / 100).toFixed(2).replace(".", ",")
+    );
+    setPrecioVentaPack(
+      (tablatura.precio_venta_centimos_pack / 100).toFixed(2).replace(".", ",")
     );
     setPublicada(tablatura.publicada);
     setArchivoPdf(null);
@@ -550,6 +566,7 @@ export function PanelAdmin() {
                   <th className="px-4 py-3 font-semibold">Grupo</th>
                   <th className="px-4 py-3 font-semibold">Canción</th>
                   <th className="px-4 py-3 font-semibold">Precio</th>
+                  <th className="px-4 py-3 font-semibold">Pack</th>
                   <th className="px-4 py-3 font-semibold">Ventas</th>
                   <th className="px-4 py-3 font-semibold">Importe acumulado</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
@@ -584,6 +601,12 @@ export function PanelAdmin() {
                     <td className="px-4 py-4 text-zinc-700">
                       {formatearPrecio(
                         tablatura.precio_venta_centimos,
+                        tablatura.moneda
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-zinc-700">
+                      {formatearPrecio(
+                        tablatura.precio_venta_centimos_pack,
                         tablatura.moneda
                       )}
                     </td>
@@ -721,7 +744,16 @@ export function PanelAdmin() {
               value={precioVenta}
               onChange={(event) => setPrecioVenta(event.target.value)}
               className="w-full rounded-full border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-950"
-              placeholder="Precio de venta. Ejemplo: 4,99"
+              placeholder="Precio PDF. Ejemplo: 4,99"
+            />
+
+            <input
+              type="text"
+              inputMode="decimal"
+              value={precioVentaPack}
+              onChange={(event) => setPrecioVentaPack(event.target.value)}
+              className="w-full rounded-full border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-950"
+              placeholder="Precio pack PDF + MIDI. Ejemplo: 7,99"
             />
 
             <label className="flex items-center gap-3 rounded-full border border-black/10 bg-white px-4 py-3 text-sm text-zinc-700">

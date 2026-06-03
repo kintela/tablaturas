@@ -328,6 +328,7 @@ export async function GET() {
         slug,
         descripcion,
         precio_venta_centimos,
+        precio_venta_centimos_pack,
         moneda,
         publicada,
         fecha_creacion,
@@ -438,6 +439,9 @@ export async function POST(request: Request) {
       const tituloCancion = String(formData.get("tituloCancion") ?? "").trim();
       const descripcion = String(formData.get("descripcion") ?? "").trim();
       const precioVentaCentimos = Number(formData.get("precioVentaCentimos") ?? "0");
+      const precioVentaCentimosPack = Number(
+        formData.get("precioVentaCentimosPack") ?? "0"
+      );
       const moneda = String(formData.get("moneda") ?? "EUR").trim().toUpperCase();
       const publicada = String(formData.get("publicada") ?? "true") === "true";
       const archivo = formData.get("archivo");
@@ -462,6 +466,16 @@ export async function POST(request: Request) {
       if (!Number.isFinite(precioVentaCentimos) || precioVentaCentimos < 0) {
         return NextResponse.json(
           { ok: false, error: "El precio debe ser un número válido." },
+          { status: 400 }
+        );
+      }
+
+      if (
+        !Number.isFinite(precioVentaCentimosPack) ||
+        precioVentaCentimosPack < 0
+      ) {
+        return NextResponse.json(
+          { ok: false, error: "El precio del pack debe ser un número válido." },
           { status: 400 }
         );
       }
@@ -510,6 +524,7 @@ export async function POST(request: Request) {
           slug,
           descripcion: descripcion || null,
           precio_venta_centimos: Math.trunc(precioVentaCentimos),
+          precio_venta_centimos_pack: Math.trunc(precioVentaCentimosPack),
           moneda: moneda || "EUR",
           publicada,
         })
@@ -601,6 +616,9 @@ export async function POST(request: Request) {
       const tituloCancion = String(formData.get("tituloCancion") ?? "").trim();
       const descripcion = String(formData.get("descripcion") ?? "").trim();
       const precioVentaCentimos = Number(formData.get("precioVentaCentimos") ?? "0");
+      const precioVentaCentimosPack = Number(
+        formData.get("precioVentaCentimosPack") ?? "0"
+      );
       const moneda = String(formData.get("moneda") ?? "EUR").trim().toUpperCase();
       const publicada = String(formData.get("publicada") ?? "true") === "true";
       const archivo = formData.get("archivo");
@@ -636,6 +654,16 @@ export async function POST(request: Request) {
         );
       }
 
+      if (
+        !Number.isFinite(precioVentaCentimosPack) ||
+        precioVentaCentimosPack < 0
+      ) {
+        return NextResponse.json(
+          { ok: false, error: "El precio del pack debe ser un número válido." },
+          { status: 400 }
+        );
+      }
+
       const { error: actualError } = await supabaseAdmin
         .from("tablaturas")
         .select("id")
@@ -660,6 +688,7 @@ export async function POST(request: Request) {
           slug,
           descripcion: descripcion || null,
           precio_venta_centimos: Math.trunc(precioVentaCentimos),
+          precio_venta_centimos_pack: Math.trunc(precioVentaCentimosPack),
           moneda: moneda || "EUR",
           publicada,
         })

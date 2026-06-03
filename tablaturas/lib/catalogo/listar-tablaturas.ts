@@ -19,6 +19,7 @@ type TablaturaRow = {
   slug: string;
   descripcion: string | null;
   precio_venta_centimos: number;
+  precio_venta_centimos_pack: number;
   moneda: string;
   archivos_tablatura: ArchivoRow[];
 };
@@ -29,6 +30,7 @@ export type TablaturaListado = {
   slug: string;
   descripcion: string | null;
   precioVentaCentimos: number;
+  precioVentaCentimosPack: number;
   moneda: string;
   grupo: {
     nombre: string;
@@ -63,6 +65,7 @@ export async function listarTablaturasPublicadas(terminoBusqueda?: string) {
         slug,
         descripcion,
         precio_venta_centimos,
+        precio_venta_centimos_pack,
         moneda,
         archivos_tablatura (
           tipo_archivo,
@@ -187,6 +190,7 @@ export async function listarTablaturasPublicadas(terminoBusqueda?: string) {
         slug: tablatura.slug,
         descripcion: tablatura.descripcion,
         precioVentaCentimos: tablatura.precio_venta_centimos,
+        precioVentaCentimosPack: tablatura.precio_venta_centimos_pack,
         moneda: tablatura.moneda,
         grupo: gruposPorId.get(tablatura.grupo_id) ?? null,
         previewUrl,

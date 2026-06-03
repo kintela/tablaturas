@@ -92,6 +92,7 @@ export function crearTablaturasMock(grupoId: string, grupoSlug: string) {
       slug,
       descripcion: `Partitura de batería para "${titulo}" del grupo ${grupoSlug}.`,
       precio_venta_centimos: precioEuros * 100 + 99,
+      precio_venta_centimos_pack: (precioEuros + 2) * 100 + 99,
       moneda: "EUR",
       url_imagen_portada: null,
       publicada: true,
