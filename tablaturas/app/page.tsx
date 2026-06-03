@@ -5,7 +5,11 @@ import { BotonAudio } from "@/app/catalogo/boton-audio";
 import { BotonCarrito } from "@/app/catalogo/boton-carrito";
 import { PanelCarrito } from "@/app/catalogo/panel-carrito";
 import { BotonPreview } from "@/app/catalogo/boton-preview";
-import { listarTablaturasPublicadas } from "@/lib/catalogo/listar-tablaturas";
+import { crearClaveCarrito } from "@/lib/carrito";
+import {
+  listarTablaturasPublicadas,
+  type TablaturaListado,
+} from "@/lib/catalogo/listar-tablaturas";
 
 type HomePageProps = {
   searchParams?: Promise<{
@@ -41,6 +45,44 @@ function TagPrecio({
     >
       {etiqueta}: {formatearPrecio(importeCentimos, moneda)}
     </span>
+  );
+}
+
+function OpcionCompra({
+  tablatura,
+  etiqueta,
+  tooltip,
+  importeCentimos,
+  tipoCompra,
+}: {
+  tablatura: TablaturaListado;
+  etiqueta: string;
+  tooltip: string;
+  importeCentimos: number;
+  tipoCompra: "pdf" | "pack";
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <TagPrecio
+        importeCentimos={importeCentimos}
+        moneda={tablatura.moneda}
+        etiqueta={etiqueta}
+        tooltip={tooltip}
+      />
+      <BotonCarrito
+        item={{
+          clave: crearClaveCarrito(tablatura.id, tipoCompra),
+          id: tablatura.id,
+          tipoCompra,
+          etiquetaCompra: etiqueta,
+          titulo: tablatura.tituloCancion,
+          grupoNombre: tablatura.grupo?.nombre ?? "Grupo sin nombre",
+          precioVentaCentimos: importeCentimos,
+          moneda: tablatura.moneda,
+          previewUrl: tablatura.previewUrl,
+        }}
+      />
+    </div>
   );
 }
 
@@ -260,20 +302,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       key={tablatura.id}
                       className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
                     >
-                      <div className="h-32 flex-shrink-0 bg-zinc-100 sm:h-36 xl:h-32 2xl:h-36">
-                        {tablatura.previewUrl ? (
-                          <img
-                            src={tablatura.previewUrl}
-                            alt={`Preview de ${tablatura.tituloCancion}`}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,#f4f4f5,#fafaf9)] text-sm text-zinc-500">
-                            Preview no disponible
-                          </div>
-                        )}
-                      </div>
-
                       <div className="flex flex-1 flex-col gap-5 p-6">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
@@ -299,33 +327,23 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
                           <div className="flex shrink-0 flex-col items-end gap-3">
                             <div className="flex flex-col items-end gap-2">
-                              <TagPrecio
+                              <OpcionCompra
+                                tablatura={tablatura}
                                 importeCentimos={tablatura.precioVentaCentimos}
-                                moneda={tablatura.moneda}
                                 etiqueta="PDF"
+                                tipoCompra="pdf"
                                 tooltip="Precio del fichero PDF"
                               />
                               {tablatura.precioVentaCentimosPack > 0 ? (
-                                <TagPrecio
+                                <OpcionCompra
+                                  tablatura={tablatura}
                                   importeCentimos={tablatura.precioVentaCentimosPack}
-                                  moneda={tablatura.moneda}
-                                  etiqueta="Pack"
+                                  etiqueta="PDF+MIDI"
+                                  tipoCompra="pack"
                                   tooltip="Precio del PDF mas el fichero MIDI en formato General MIDI para poder insertarlo directamente en tu DAW o plugin como EzDrummer"
                                 />
                               ) : null}
                             </div>
-
-                            <BotonCarrito
-                              item={{
-                                id: tablatura.id,
-                                titulo: tablatura.tituloCancion,
-                                grupoNombre:
-                                  tablatura.grupo?.nombre ?? "Grupo sin nombre",
-                                precioVentaCentimos: tablatura.precioVentaCentimos,
-                                moneda: tablatura.moneda,
-                                previewUrl: tablatura.previewUrl,
-                              }}
-                            />
                           </div>
                         </div>
                       </div>
@@ -353,20 +371,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               key={tablatura.id}
               className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
             >
-              <div className="h-32 flex-shrink-0 bg-zinc-100 sm:h-36 xl:h-32 2xl:h-36">
-                {tablatura.previewUrl ? (
-                  <img
-                    src={tablatura.previewUrl}
-                    alt={`Preview de ${tablatura.tituloCancion}`}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,#f4f4f5,#fafaf9)] text-sm text-zinc-500">
-                    Preview no disponible
-                  </div>
-                )}
-              </div>
-
               <div className="flex flex-1 flex-col gap-5 p-6">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.26em] text-zinc-500">
@@ -392,33 +396,23 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
                   <div className="flex shrink-0 flex-col items-end gap-3">
                     <div className="flex flex-col items-end gap-2">
-                      <TagPrecio
+                      <OpcionCompra
+                        tablatura={tablatura}
                         importeCentimos={tablatura.precioVentaCentimos}
-                        moneda={tablatura.moneda}
                         etiqueta="PDF"
+                        tipoCompra="pdf"
                         tooltip="Precio del fichero PDF"
                       />
                       {tablatura.precioVentaCentimosPack > 0 ? (
-                        <TagPrecio
+                        <OpcionCompra
+                          tablatura={tablatura}
                           importeCentimos={tablatura.precioVentaCentimosPack}
-                          moneda={tablatura.moneda}
-                          etiqueta="Pack"
+                          etiqueta="PDF+MIDI"
+                          tipoCompra="pack"
                           tooltip="Precio del PDF mas el fichero MIDI en formato General MIDI para poder insertarlo directamente en tu DAW o plugin como EzDrummer"
                         />
                       ) : null}
                     </div>
-
-                    <BotonCarrito
-                      item={{
-                        id: tablatura.id,
-                        titulo: tablatura.tituloCancion,
-                        grupoNombre:
-                          tablatura.grupo?.nombre ?? "Grupo sin nombre",
-                        precioVentaCentimos: tablatura.precioVentaCentimos,
-                        moneda: tablatura.moneda,
-                        previewUrl: tablatura.previewUrl,
-                      }}
-                    />
                   </div>
                 </div>
               </div>

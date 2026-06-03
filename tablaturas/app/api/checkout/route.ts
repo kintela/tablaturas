@@ -4,7 +4,7 @@ import { getUsuarioYPerfilActual } from "@/lib/supabase/auth";
 import { getStripeServerClient } from "@/lib/stripe/server";
 
 type CheckoutBody = {
-  items?: Array<{ id: string }>;
+  items?: Array<{ id: string; tipoCompra?: "pdf" | "pack" }>;
 };
 
 function obtenerOrigenApp(request: Request) {
@@ -36,15 +36,19 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as CheckoutBody;
-    const itemIds = Array.from(
-      new Set(
-        (body.items ?? [])
-          .map((item) => item.id?.trim())
-          .filter((itemId): itemId is string => Boolean(itemId))
-      )
-    );
+    const items = (body.items ?? [])
+      .map((item) => ({
+        id: item.id?.trim(),
+        tipoCompra: item.tipoCompra === "pack" ? "pack" : "pdf",
+      }))
+      .filter((item): item is { id: string; tipoCompra: "pdf" | "pack" } => Boolean(item.id));
 
-    if (itemIds.length === 0) {
+    const clavesItems = Array.from(
+      new Set(items.map((item) => `${item.id}:${item.tipoCompra}`))
+    );
+    const itemIds = Array.from(new Set(items.map((item) => item.id)));
+
+    if (clavesItems.length === 0) {
       return NextResponse.json(
         { ok: false, error: "El carrito está vacío." },
         { status: 400 }
@@ -54,7 +58,7 @@ export async function POST(request: Request) {
     const { data: tablaturas, error: tablaturasError } = await supabase
       .from("tablaturas")
       .select(
-        "id, titulo_cancion, precio_venta_centimos, moneda, publicada, grupos(nombre)"
+        "id, titulo_cancion, precio_venta_centimos, precio_venta_centimos_pack, moneda, publicada, grupos(nombre)"
       )
       .in("id", itemIds)
       .eq("publicada", true);
@@ -75,7 +79,7 @@ export async function POST(request: Request) {
 
     const { data: comprasPrevias, error: comprasPreviasError } = await supabase
       .from("compras")
-      .select("tablatura_id")
+      .select("tablatura_id, tipo_compra")
       .eq("usuario_id", user.id)
       .eq("estado", "pagada")
       .in("tablatura_id", itemIds);
@@ -84,7 +88,23 @@ export async function POST(request: Request) {
       throw comprasPreviasError;
     }
 
-    if ((comprasPrevias ?? []).length > 0) {
+    const comprasPreviasSet = new Set(
+      (comprasPrevias ?? []).map((compra) => `${compra.tablatura_id}:${compra.tipo_compra}`)
+    );
+
+    const compraIncompatible = items.some((item) => {
+      if (comprasPreviasSet.has(`${item.id}:${item.tipoCompra}`)) {
+        return true;
+      }
+
+      if (item.tipoCompra === "pdf" && comprasPreviasSet.has(`${item.id}:pack`)) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (compraIncompatible) {
       return NextResponse.json(
         {
           ok: false,
@@ -95,9 +115,29 @@ export async function POST(request: Request) {
       );
     }
 
+    const tablaturasPorId = new Map(tablaturas.map((tablatura) => [tablatura.id, tablatura]));
+    const itemsCheckout = items.map((item) => {
+      const tablatura = tablaturasPorId.get(item.id);
+
+      if (!tablatura) {
+        throw new Error("Alguna de las tablaturas del carrito ya no está disponible.");
+      }
+
+      const precio =
+        item.tipoCompra === "pack"
+          ? tablatura.precio_venta_centimos_pack
+          : tablatura.precio_venta_centimos;
+
+      return {
+        ...item,
+        tablatura,
+        precio,
+      };
+    });
+
     const moneda = tablaturas[0]?.moneda ?? "EUR";
-    const importeTotalCentimos = tablaturas.reduce(
-      (acumulado, tablatura) => acumulado + tablatura.precio_venta_centimos,
+    const importeTotalCentimos = itemsCheckout.reduce(
+      (acumulado, item) => acumulado + item.precio,
       0
     );
 
@@ -117,12 +157,13 @@ export async function POST(request: Request) {
       throw pedidoError ?? new Error("No se pudo crear el pedido.");
     }
 
-    const filasCompras = tablaturas.map((tablatura) => ({
+    const filasCompras = itemsCheckout.map((item) => ({
       usuario_id: user.id,
-      tablatura_id: tablatura.id,
+      tablatura_id: item.tablatura.id,
       pedido_id: pedido.id,
-      importe_pagado_centimos: tablatura.precio_venta_centimos,
-      moneda: tablatura.moneda,
+      tipo_compra: item.tipoCompra,
+      importe_pagado_centimos: item.precio,
+      moneda: item.tablatura.moneda,
       estado: "pendiente",
     }));
 
@@ -149,20 +190,25 @@ export async function POST(request: Request) {
         pedido_id: pedido.id,
         usuario_id: user.id,
       },
-      line_items: tablaturas.map((tablatura) => {
-        const grupo = Array.isArray(tablatura.grupos)
-          ? tablatura.grupos[0]
-          : tablatura.grupos;
+      line_items: itemsCheckout.map((item) => {
+        const grupo = Array.isArray(item.tablatura.grupos)
+          ? item.tablatura.grupos[0]
+          : item.tablatura.grupos;
 
         return {
           quantity: 1,
           price_data: {
-            currency: tablatura.moneda.toLowerCase(),
-            unit_amount: tablatura.precio_venta_centimos,
+            currency: item.tablatura.moneda.toLowerCase(),
+            unit_amount: item.precio,
             product_data: {
-              name: tablatura.titulo_cancion,
+              name:
+                item.tipoCompra === "pack"
+                  ? `${item.tablatura.titulo_cancion} - Pack PDF + MIDI`
+                  : `${item.tablatura.titulo_cancion} - PDF`,
               description: grupo?.nombre
-                ? `Partitura de batería de ${grupo.nombre}`
+                ? item.tipoCompra === "pack"
+                  ? `Partitura de batería y MIDI General de ${grupo.nombre}`
+                  : `Partitura de batería de ${grupo.nombre}`
                 : "Partitura de batería",
             },
           },

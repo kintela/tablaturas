@@ -28,6 +28,8 @@ type Tablatura = {
   precio_venta_centimos_pack: number;
   moneda: string;
   publicada: boolean;
+  total_ventas_pdf: number;
+  total_ventas_pack: number;
   total_ventas: number;
   importe_acumulado_centimos: number;
   fecha_creacion?: string;
@@ -565,11 +567,12 @@ export function PanelAdmin() {
                 <tr>
                   <th className="px-4 py-3 font-semibold">Grupo</th>
                   <th className="px-4 py-3 font-semibold">Canción</th>
-                  <th className="px-4 py-3 font-semibold">Precio</th>
+                  <th className="px-4 py-3 font-semibold">PDF</th>
+                  <th className="px-4 py-3 font-semibold">Ventas</th>
                   <th className="px-4 py-3 font-semibold">Pack</th>
                   <th className="px-4 py-3 font-semibold">Ventas</th>
+                  <th className="px-4 py-3 font-semibold">Total</th>
                   <th className="px-4 py-3 font-semibold">Importe acumulado</th>
-                  <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Acciones</th>
                 </tr>
               </thead>
@@ -605,10 +608,16 @@ export function PanelAdmin() {
                       )}
                     </td>
                     <td className="px-4 py-4 text-zinc-700">
+                      {tablatura.total_ventas_pdf}
+                    </td>
+                    <td className="px-4 py-4 text-zinc-700">
                       {formatearPrecio(
                         tablatura.precio_venta_centimos_pack,
                         tablatura.moneda
                       )}
+                    </td>
+                    <td className="px-4 py-4 text-zinc-700">
+                      {tablatura.total_ventas_pack}
                     </td>
                     <td className="px-4 py-4 text-zinc-700">
                       {tablatura.total_ventas}
@@ -618,17 +627,6 @@ export function PanelAdmin() {
                         tablatura.importe_acumulado_centimos,
                         tablatura.moneda
                       )}
-                    </td>
-                    <td className="px-4 py-4">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          tablatura.publicada
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-zinc-100 text-zinc-700"
-                        }`}
-                      >
-                        {tablatura.publicada ? "Publicada" : "Oculta"}
-                      </span>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex gap-2">

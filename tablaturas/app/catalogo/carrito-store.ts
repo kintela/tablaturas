@@ -3,7 +3,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type ItemCarrito = {
+  clave: string;
   id: string;
+  tipoCompra: "pdf" | "pack";
+  etiquetaCompra: string;
   titulo: string;
   grupoNombre: string;
   precioVentaCentimos: number;
@@ -46,14 +49,25 @@ export function leerCarrito() {
   return leerCarritoDesdeStorage();
 }
 
-export function estaEnCarrito(itemId: string) {
-  return leerCarritoDesdeStorage().some((item) => item.id === itemId);
+export function estaEnCarrito(clave: string) {
+  return leerCarritoDesdeStorage().some((item) => item.clave === clave);
+}
+
+export function obtenerItemCarritoPorTablatura(itemId: string) {
+  return leerCarritoDesdeStorage().find((item) => item.id === itemId) ?? null;
 }
 
 export function anadirAlCarrito(item: ItemCarrito) {
-  const actual = leerCarritoDesdeStorage();
+  const actual = leerCarritoDesdeStorage().filter((existente) => {
+    if (existente.clave === item.clave) {
+      return true;
+    }
 
-  if (actual.some((existente) => existente.id === item.id)) {
+    // Solo puede quedar una modalidad por tablatura; el pack sustituye al PDF.
+    return existente.id !== item.id;
+  });
+
+  if (actual.some((existente) => existente.clave === item.clave)) {
     return actual;
   }
 
@@ -62,8 +76,8 @@ export function anadirAlCarrito(item: ItemCarrito) {
   return siguiente;
 }
 
-export function quitarDelCarrito(itemId: string) {
-  const siguiente = leerCarritoDesdeStorage().filter((item) => item.id !== itemId);
+export function quitarDelCarrito(clave: string) {
+  const siguiente = leerCarritoDesdeStorage().filter((item) => item.clave !== clave);
   guardarCarrito(siguiente);
   return siguiente;
 }

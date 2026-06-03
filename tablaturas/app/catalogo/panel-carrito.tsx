@@ -122,7 +122,7 @@ export function PanelCarrito() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          items: items.map((item) => ({ id: item.id })),
+          items: items.map((item) => ({ id: item.id, tipoCompra: item.tipoCompra })),
         }),
       });
 
@@ -213,7 +213,7 @@ export function PanelCarrito() {
                     <div className="flex flex-col gap-4">
                       {items.map((item) => (
                         <article
-                          key={item.id}
+                          key={item.clave}
                           className="rounded-[1.5rem] border border-black/10 bg-zinc-50 p-4"
                         >
                           <div className="flex items-start justify-between gap-4">
@@ -224,6 +224,9 @@ export function PanelCarrito() {
                               <h3 className="mt-2 text-lg font-semibold tracking-tight text-zinc-950">
                                 {item.titulo}
                               </h3>
+                              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                                {item.etiquetaCompra}
+                              </p>
                             </div>
                             <span className="rounded-full bg-amber-200 px-3 py-2 text-sm font-semibold text-zinc-950">
                               {formatearPrecio(item.precioVentaCentimos, item.moneda)}
@@ -232,7 +235,7 @@ export function PanelCarrito() {
                           <div className="mt-4 flex justify-end">
                             <button
                               type="button"
-                              onClick={() => quitarDelCarrito(item.id)}
+                              onClick={() => quitarDelCarrito(item.clave)}
                               className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-950"
                             >
                               Quitar

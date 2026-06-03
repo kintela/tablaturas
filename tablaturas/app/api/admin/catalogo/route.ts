@@ -348,13 +348,17 @@ export async function GET() {
     const tablaturaIds = (tablaturas ?? []).map((tablatura) => tablatura.id);
     let metricasPorTablatura = new Map<
       string,
-      { totalVentas: number; importeAcumuladoCentimos: number }
+      {
+        totalVentasPdf: number;
+        totalVentasPack: number;
+        importeAcumuladoCentimos: number;
+      }
     >();
 
     if (tablaturaIds.length > 0) {
       const { data: comprasPagadas, error: comprasPagadasError } = await supabaseAdmin
         .from("compras")
-        .select("tablatura_id, importe_pagado_centimos")
+        .select("tablatura_id, importe_pagado_centimos, tipo_compra")
         .in("tablatura_id", tablaturaIds)
         .eq("estado", "pagada");
 
@@ -364,11 +368,16 @@ export async function GET() {
 
       metricasPorTablatura = (comprasPagadas ?? []).reduce((acc, compra) => {
         const actual = acc.get(compra.tablatura_id) ?? {
-          totalVentas: 0,
+          totalVentasPdf: 0,
+          totalVentasPack: 0,
           importeAcumuladoCentimos: 0,
         };
 
-        actual.totalVentas += 1;
+        if (compra.tipo_compra === "pack") {
+          actual.totalVentasPack += 1;
+        } else {
+          actual.totalVentasPdf += 1;
+        }
         actual.importeAcumuladoCentimos += compra.importe_pagado_centimos;
         acc.set(compra.tablatura_id, actual);
         return acc;
@@ -383,7 +392,10 @@ export async function GET() {
 
         return {
           ...tablatura,
-          total_ventas: metricas?.totalVentas ?? 0,
+          total_ventas_pdf: metricas?.totalVentasPdf ?? 0,
+          total_ventas_pack: metricas?.totalVentasPack ?? 0,
+          total_ventas:
+            (metricas?.totalVentasPdf ?? 0) + (metricas?.totalVentasPack ?? 0),
           importe_acumulado_centimos: metricas?.importeAcumuladoCentimos ?? 0,
         };
       }),

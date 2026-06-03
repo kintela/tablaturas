@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   anadirAlCarrito,
   estaEnCarrito,
+  leerCarrito,
   quitarDelCarrito,
   sincronizarCarritoConCatalogo,
   type ItemCarrito,
@@ -37,8 +38,17 @@ type BotonCarritoProps = {
 export function BotonCarrito({ item }: BotonCarritoProps) {
   const supabase = getSupabaseBrowserClient();
   const [autenticado, setAutenticado] = useState(false);
-  const [enCarrito, setEnCarrito] = useState(false);
+  const [itemsCarrito, setItemsCarrito] = useState<ItemCarrito[]>(() => leerCarrito());
   const [sincronizando, setSincronizando] = useState(false);
+  const itemActual = useMemo(
+    () => itemsCarrito.find((itemCarrito) => itemCarrito.id === item.id) ?? null,
+    [item.id, itemsCarrito]
+  );
+  const enCarrito = itemActual?.clave === item.clave;
+  const bloqueadoPorPack =
+    item.tipoCompra === "pdf" &&
+    itemActual?.tipoCompra === "pack" &&
+    itemActual.clave !== item.clave;
 
   useEffect(() => {
     let activo = true;
@@ -50,7 +60,7 @@ export function BotonCarrito({ item }: BotonCarritoProps) {
 
       if (activo) {
         setAutenticado(Boolean(session));
-        setEnCarrito(estaEnCarrito(item.id));
+        setItemsCarrito(leerCarrito());
       }
     }
 
@@ -66,54 +76,53 @@ export function BotonCarrito({ item }: BotonCarritoProps) {
       activo = false;
       subscription.unsubscribe();
     };
-  }, [item.id, supabase]);
+  }, [supabase]);
 
   useEffect(() => {
     function sincronizar() {
-      setEnCarrito(estaEnCarrito(item.id));
+      setItemsCarrito(leerCarrito());
     }
 
-    sincronizar();
     window.addEventListener("carrito-actualizado", sincronizar);
 
     return () => {
       window.removeEventListener("carrito-actualizado", sincronizar);
     };
-  }, [item.id]);
+  }, []);
 
-  const tooltip = autenticado
-    ? enCarrito
-      ? "Quitar del carrito"
-      : "Añadir al carrito"
-    : "Para poder hacer una compra antes has de iniciar sesion con tu cuenta. Si no la has creado aún este es un buen momento";
+  const tooltip = !autenticado
+    ? "Para poder hacer una compra antes has de iniciar sesion con tu cuenta. Si no la has creado aún este es un buen momento"
+    : bloqueadoPorPack
+      ? "El pack ya incluye el PDF, asi que esta opcion queda deshabilitada"
+      : enCarrito
+        ? "Quitar del carrito"
+        : "Añadir al carrito";
 
   async function manejarClick() {
-    if (!autenticado || sincronizando) {
+    if (!autenticado || sincronizando || bloqueadoPorPack) {
       return;
     }
 
     setSincronizando(true);
 
     try {
-      let itemSigueEnCarrito = estaEnCarrito(item.id);
+      let itemSigueEnCarrito = estaEnCarrito(item.clave);
 
       try {
         const itemsSincronizados = await sincronizarCarritoConCatalogo(supabase);
         itemSigueEnCarrito = itemsSincronizados.some(
-          (itemEnCarrito) => itemEnCarrito.id === item.id
+          (itemEnCarrito) => itemEnCarrito.clave === item.clave
         );
       } catch (error) {
         console.error("No se pudo sincronizar el carrito con el catálogo.", error);
       }
 
       if (itemSigueEnCarrito) {
-        quitarDelCarrito(item.id);
-        setEnCarrito(false);
+        quitarDelCarrito(item.clave);
         return;
       }
 
       anadirAlCarrito(item);
-      setEnCarrito(true);
     } finally {
       setSincronizando(false);
     }
@@ -123,13 +132,13 @@ export function BotonCarrito({ item }: BotonCarritoProps) {
     <span className="inline-flex" title={tooltip}>
       <button
         type="button"
-        disabled={!autenticado}
+        disabled={!autenticado || bloqueadoPorPack}
         aria-label={tooltip}
         onClick={() => {
           void manejarClick();
         }}
         className={`inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${
-          autenticado
+          autenticado && !bloqueadoPorPack
             ? enCarrito
               ? "border-zinc-950 bg-zinc-950 text-white"
               : "border-black/10 bg-white text-zinc-700 hover:border-zinc-950 hover:bg-zinc-950 hover:text-white"
