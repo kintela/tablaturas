@@ -30,6 +30,12 @@ type Tablatura = {
   total_ventas: number;
   importe_acumulado_centimos: number;
   fecha_creacion?: string;
+  archivos_tablatura?: Array<{
+    tipo_archivo: string;
+    ruta: string;
+    nombre_original?: string | null;
+    orden: number;
+  }>;
 };
 
 type EstadoCatalogo = {
@@ -58,6 +64,21 @@ function formatearPrecio(precioVentaCentimos: number, moneda: string) {
     style: "currency",
     currency: moneda,
   }).format(precioVentaCentimos / 100);
+}
+
+function formatearTipoArchivo(tipoArchivo: string) {
+  switch (tipoArchivo) {
+    case "pdf":
+      return "PDF";
+    case "imagen_previa":
+      return "Preview";
+    case "midi":
+      return "MIDI";
+    case "wav":
+      return "WAV";
+    default:
+      return tipoArchivo;
+  }
 }
 
 function IconoEditar() {
@@ -537,10 +558,7 @@ export function PanelAdmin() {
               </thead>
               <tbody>
                 {tablaturasOrdenadas.map((tablatura) => (
-                  <tr
-                    key={tablatura.id}
-                    className="border-t border-black/10 align-top"
-                  >
+                  <tr key={tablatura.id} className="border-t border-black/10 align-top">
                     <td className="px-4 py-4 text-zinc-700">
                       {gruposPorId.get(tablatura.grupo_id)?.nombre ?? "Grupo desconocido"}
                     </td>
@@ -549,6 +567,19 @@ export function PanelAdmin() {
                         {tablatura.titulo_cancion}
                       </div>
                       <div className="mt-1 text-xs text-zinc-500">{tablatura.slug}</div>
+                      <div className="mt-2 flex flex-col gap-1 text-xs text-zinc-500">
+                        {tablatura.archivos_tablatura
+                          ?.slice()
+                          .sort((a, b) => a.orden - b.orden)
+                          .map((archivo) => (
+                            <div key={`${tablatura.id}-${archivo.ruta}`}>
+                              <span className="font-semibold text-zinc-700">
+                                {formatearTipoArchivo(archivo.tipo_archivo)}:
+                              </span>{" "}
+                              <span>{archivo.nombre_original || archivo.ruta}</span>
+                            </div>
+                          ))}
+                      </div>
                     </td>
                     <td className="px-4 py-4 text-zinc-700">
                       {formatearPrecio(

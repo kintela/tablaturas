@@ -322,7 +322,21 @@ export async function GET() {
     const { data: tablaturas, error: tablaturasError } = await supabaseAdmin
       .from("tablaturas")
       .select(
-        "id, grupo_id, titulo_cancion, slug, descripcion, precio_venta_centimos, moneda, publicada, fecha_creacion"
+        `id,
+        grupo_id,
+        titulo_cancion,
+        slug,
+        descripcion,
+        precio_venta_centimos,
+        moneda,
+        publicada,
+        fecha_creacion,
+        archivos_tablatura (
+          tipo_archivo,
+          ruta,
+          nombre_original,
+          orden
+        )`
       )
       .order("titulo_cancion", { ascending: true });
 
