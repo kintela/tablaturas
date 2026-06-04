@@ -19,13 +19,17 @@ export const metadata: Metadata = {
   description:
     "Catálogo de partituras para batería con previews, PDF y packs PDF + MIDI General para estudio, DAW o EzDrummer.",
   alternates: {
-    canonical: "/catalogo",
+    canonical: "/",
   },
   openGraph: {
-    url: `${SITE_URL}/catalogo`,
+    url: SITE_URL,
     title: "Catalogo de partituras | Renteria Drums",
     description:
       "Catálogo de partituras para batería con previews, PDF y packs PDF + MIDI General para estudio, DAW o EzDrummer.",
+  },
+  robots: {
+    index: false,
+    follow: true,
   },
 };
 
@@ -122,7 +126,7 @@ function crearHrefConVista(q: string, columnas: string, vista: string) {
   params.set("columnas", columnas);
   params.set("vista", vista);
 
-  return `/catalogo?${params.toString()}`;
+  return `/?${params.toString()}`;
 }
 
 function crearHrefAlternarColumnas(
@@ -189,10 +193,10 @@ export default async function CatalogoPage({ searchParams }: CatalogoPageProps) 
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-6xl">
               <Link
-                href="/"
+                href="/academia"
                 className="inline-flex rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500 transition hover:border-zinc-950 hover:text-zinc-950"
               >
-                Volver a la portada
+                Ver academia
               </Link>
               <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl lg:whitespace-nowrap lg:text-[3.5rem]">
                 Partituras y recursos para bateristas

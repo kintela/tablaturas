@@ -9,14 +9,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: SITE_URL,
       lastModified,
-      changeFrequency: "weekly",
-      priority: 1,
-    },
-    {
-      url: `${SITE_URL}/catalogo`,
-      lastModified,
       changeFrequency: "daily",
-      priority: 0.9,
+      priority: 1,
     },
   ];
 }
