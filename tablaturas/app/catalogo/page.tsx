@@ -192,13 +192,7 @@ export default async function CatalogoPage({ searchParams }: CatalogoPageProps) 
         <section className="overflow-hidden rounded-[2.5rem] border border-black/10 bg-white/85 p-8 shadow-[0_30px_100px_rgba(15,23,42,0.08)] backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-6xl">
-              <Link
-                href="/academia"
-                className="inline-flex rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500 transition hover:border-zinc-950 hover:text-zinc-950"
-              >
-                Ver academia
-              </Link>
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl lg:whitespace-nowrap lg:text-[3.5rem]">
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl lg:whitespace-nowrap lg:text-[3.5rem]">
                 Partituras y recursos para bateristas
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-600 sm:text-base">
@@ -451,6 +445,18 @@ export default async function CatalogoPage({ searchParams }: CatalogoPageProps) 
             ))}
           </section>
         )}
+
+        <footer className="rounded-[2rem] border border-black/10 bg-white/70 px-6 py-5 text-sm text-zinc-600 shadow-[0_18px_50px_rgba(15,23,42,0.04)]">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="font-medium text-zinc-950">Renteria Drums</p>
+            <a
+              href="mailto:info@renteriadrums.com"
+              className="transition hover:text-zinc-950"
+            >
+              info@renteriadrums.com
+            </a>
+          </div>
+        </footer>
       </div>
     </main>
   );
