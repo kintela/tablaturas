@@ -17,7 +17,7 @@ import { SITE_URL } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "Catalogo de partituras",
   description:
-    "Catálogo de partituras para batería con previews, PDF y packs PDF + MIDI General para estudio, DAW o EzDrummer.",
+    "Partituras de bateria profesionales en formato compacto de 2 paginas, con audio de referencia en EZdrummer y opciones PDF o PDF + MIDI.",
   alternates: {
     canonical: "/",
   },
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     url: SITE_URL,
     title: "Catalogo de partituras | Renteria Drums",
     description:
-      "Catálogo de partituras para batería con previews, PDF y packs PDF + MIDI General para estudio, DAW o EzDrummer.",
+      "Partituras de bateria profesionales en formato compacto de 2 paginas, con audio de referencia en EZdrummer y opciones PDF o PDF + MIDI.",
   },
   robots: {
     index: false,
@@ -104,6 +104,15 @@ function OpcionCompra({
           previewUrl: tablatura.previewUrl,
         }}
       />
+    </div>
+  );
+}
+
+function InsigniaFormatoCompacto() {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-100/90 px-3 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-amber-950 shadow-[0_12px_30px_rgba(245,158,11,0.22)]">
+      <span className="text-base leading-none">🥁</span>
+      <span>Formato compacto 2 paginas</span>
     </div>
   );
 }
@@ -192,12 +201,45 @@ export default async function CatalogoPage({ searchParams }: CatalogoPageProps) 
         <section className="overflow-hidden rounded-[2.5rem] border border-black/10 bg-white/85 p-8 shadow-[0_30px_100px_rgba(15,23,42,0.08)] backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-6xl">
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl lg:whitespace-nowrap lg:text-[3.5rem]">
-                Partituras y recursos para bateristas
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <InsigniaFormatoCompacto />
+                <span className="rounded-full border border-black/10 bg-white/80 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-700">
+                  Partituras de bateria profesionales
+                </span>
+              </div>
+
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl lg:text-[3.5rem]">
+                Diseñadas por un baterista para bateristas
               </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-600 sm:text-base">
-                PDF listos para estudiar, previews visuales y, en algunos temas, pack con
-                PDF + MIDI General para llevarlo directo a tu DAW o plugin.
+              <p className="mt-3 max-w-4xl text-sm leading-7 text-zinc-600 sm:text-base">
+                Todas las partituras estan optimizadas para ocupar unicamente 2 paginas,
+                con una maquetacion clara, profesional y pensada para lectura rapida en
+                ensayo, estudio o directo.
+              </p>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {[
+                  "Sin cambios de pagina innecesarios.",
+                  "Formato ideal para tablet, iPad y atril.",
+                  "Maquetacion clara y profesional.",
+                  "Lectura fluida de principio a fin.",
+                  "Exportadas y revisadas para una interpretacion practica.",
+                  "Incluye audio de referencia realizado con EZdrummer.",
+                ].map((punto) => (
+                  <div
+                    key={punto}
+                    className="rounded-[1.5rem] border border-black/10 bg-gradient-to-br from-white to-amber-50 px-4 py-3 text-sm font-medium text-zinc-700 shadow-[0_14px_40px_rgba(15,23,42,0.04)]"
+                  >
+                    <span className="mr-2 text-emerald-600">✅</span>
+                    {punto}
+                  </div>
+                ))}
+              </div>
+
+              <p className="mt-5 max-w-4xl text-sm leading-7 text-zinc-600 sm:text-base">
+                Perfectas para aprender canciones, preparar repertorio y tocar con total
+                comodidad. Ademas, algunos temas incluyen pack con PDF + MIDI para
+                llevarlos directamente a tu DAW o plugin.
               </p>
             </div>
 
